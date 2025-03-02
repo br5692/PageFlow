@@ -37,5 +37,27 @@ namespace backend.Services
 
             return books;
         }
+
+        public async Task<BookDto?> GetBookByIdAsync(int id)
+        {
+            var book = await _context.Books
+                .Where(b => b.Id == id)
+                .Select(b => new BookDto
+                {
+                    Id = b.Id,
+                    Title = b.Title,
+                    Author = b.Author,
+                    ISBN = b.ISBN,
+                    PublishedDate = b.PublishedDate,
+                    Description = b.Description,
+                    Publisher = b.Publisher,
+                    Category = b.Category,
+                    PageCount = b.PageCount,
+                    CoverImage = b.CoverImage
+                })
+                .FirstOrDefaultAsync();
+
+            return book;
+        }
     }
 }

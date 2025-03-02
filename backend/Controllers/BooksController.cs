@@ -26,5 +26,19 @@ namespace backend.Controllers
             var books = await _bookService.GetAllBooksAsync();
             return Ok(books);
         }
+
+        /// <summary>
+        /// Retrieves a book by its ID.
+        /// </summary>
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetBookById(int id)
+        {
+            var book = await _bookService.GetBookByIdAsync(id);
+            if (book == null)
+            {
+                return NotFound(new { message = "Book not found." });
+            }
+            return Ok(book);
+        }
     }
 }
