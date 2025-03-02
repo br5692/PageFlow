@@ -22,6 +22,7 @@ builder.Services.AddIdentity<LibraryUser, IdentityRole>()
 // Register services
 builder.Services.AddScoped<DbSeeder>(); // Register the database seeder
 builder.Services.AddHttpClient(); // HttpClient for API calls
+builder.Services.AddScoped<IBookService, BookService>();
 
 // Configure Swagger
 builder.Services.AddEndpointsApiExplorer();
