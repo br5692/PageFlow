@@ -61,11 +61,16 @@ namespace backend.Controllers
         }
 
         [HttpGet("search")]
-        public async Task<ActionResult<IEnumerable<BookDto>>> SearchBooks([FromQuery] string query = "", [FromQuery] string? category = null, [FromQuery] string? author = null)
+        public async Task<ActionResult<IEnumerable<BookDto>>> SearchBooks(
+            [FromQuery] string query = "",
+            [FromQuery] string? category = null,
+            [FromQuery] string? author = null,
+            [FromQuery] bool? isAvailable = null
+            )
         {
             try
             {
-                var books = await _bookService.SearchBooksAsync(query, category, author);
+                var books = await _bookService.SearchBooksAsync(query, category, author, isAvailable);
                 return Ok(books);
             }
             catch (Exception ex)

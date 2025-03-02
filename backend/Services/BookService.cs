@@ -30,25 +30,35 @@ public class BookService : IBookService
         return book != null ? MapToBookDto(book) : null;
     }
 
-    public async Task<IEnumerable<BookDto>> SearchBooksAsync(string searchTerm, string? category = null, string? author = null)
+    public async Task<IEnumerable<BookDto>> SearchBooksAsync(string searchTerm, string? category = null, string? author = null, bool? isAvailable = null)
     {
         var query = _context.Books.AsQueryable();
 
+        // Search by title or author
         if (!string.IsNullOrEmpty(searchTerm))
         {
             query = query.Where(b => b.Title.Contains(searchTerm) || b.Author.Contains(searchTerm));
         }
 
+        // Filter by category
         if (!string.IsNullOrEmpty(category))
         {
             query = query.Where(b => b.Category == category);
         }
 
+        // Filter by author
         if (!string.IsNullOrEmpty(author))
         {
             query = query.Where(b => b.Author.Contains(author));
         }
 
+        // Filter by availability
+        if (isAvailable.HasValue)
+        {
+            query = query.Where(b => b.IsAvailable == isAvailable.Value);
+        }
+
+        // Include reviews for average rating calculation
         return await query
             .Include(b => b.Reviews)
             .Select(b => MapToBookDto(b))
