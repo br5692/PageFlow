@@ -23,26 +23,42 @@ namespace backend.Services
         {
             var roles = await _userManager.GetRolesAsync(user);
             var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Name, user.UserName),
-                new Claim(ClaimTypes.Email, user.Email)
-            };
+    {
+        new Claim(ClaimTypes.NameIdentifier, user.Id),
+        new Claim(ClaimTypes.Name, user.UserName),
+        new Claim(ClaimTypes.Email, user.Email)
+    };
 
             claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+            // Detailed logging
+            var jwtKey = _configuration["Jwt:Key"];
+            var jwtIssuer = _configuration["Jwt:Issuer"];
+
+            Console.WriteLine($"[TOKEN GEN] Key: {jwtKey?.Substring(0, 5)}... (length: {jwtKey?.Length})");
+            Console.WriteLine($"[TOKEN GEN] Issuer: {jwtIssuer}");
+
+            var keyBytes = Encoding.UTF8.GetBytes(jwtKey);
+            Console.WriteLine($"[TOKEN GEN] Key byte length: {keyBytes.Length}");
+
+            var key = new SymmetricSecurityKey(keyBytes);
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+            var expiration = DateTime.UtcNow.AddHours(3);
+            Console.WriteLine($"[TOKEN GEN] Expiration: {expiration}");
+
             var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Issuer"],
+                issuer: jwtIssuer,
+                audience: jwtIssuer,
                 claims: claims,
-                expires: DateTime.UtcNow.AddHours(3),
+                expires: expiration,
                 signingCredentials: creds
             );
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+            Console.WriteLine($"[TOKEN GEN] Generated token (first 20 chars): {tokenString.Substring(0, 20)}...");
+
+            return tokenString;
         }
     }
 }

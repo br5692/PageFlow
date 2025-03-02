@@ -10,6 +10,12 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+Console.WriteLine("=== Configuration Check ===");
+Console.WriteLine($"JWT Key from config: {builder.Configuration["Jwt:Key"]?.Substring(0, 5)}... (length: {builder.Configuration["Jwt:Key"]?.Length})");
+Console.WriteLine($"JWT Issuer from config: {builder.Configuration["Jwt:Issuer"]}");
+Console.WriteLine($"Connection string: {builder.Configuration.GetConnectionString("LibraryDB")?.Substring(0, 20)}...");
+Console.WriteLine("=========================");
+
 // Add services to the container.
 builder.Services.AddControllers();
 
@@ -19,30 +25,57 @@ builder.Services.AddDbContext<LibraryDbContext>(options =>
 );
 
 // Configure ASP.NET Identity
-builder.Services.AddIdentity<LibraryUser, IdentityRole>()
-    .AddEntityFrameworkStores<LibraryDbContext>()
-    .AddDefaultTokenProviders();
+builder.Services.AddIdentity<LibraryUser, IdentityRole>(options =>
+{
+    options.SignIn.RequireConfirmedAccount = false; // Optional, depends on if you need email confirmation
+})
+.AddEntityFrameworkStores<LibraryDbContext>()
+.AddDefaultTokenProviders();
 
 // Configure JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is missing.");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("JWT Issuer is missing.");
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Events.OnRedirectToLogin = context =>
     {
-        options.RequireHttpsMetadata = false;
-        options.SaveToken = true;
-        options.TokenValidationParameters = new TokenValidationParameters
+        context.Response.StatusCode = 401;
+        return Task.CompletedTask;
+    };
+});
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    var keyBytes = Encoding.UTF8.GetBytes(jwtKey);
+
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+        ValidateIssuer = true,
+        ValidIssuer = jwtIssuer,
+        ValidateAudience = true,
+        ValidAudience = jwtIssuer,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
+
+    // For debugging
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
         {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtIssuer,
-            ValidateLifetime = true
-        };
-    });
+            Console.WriteLine($"Auth failed: {context.Exception.Message}");
+            return Task.CompletedTask;
+        }
+    };
+});
 
 builder.Services.AddSwaggerGen(options =>
 {
@@ -91,7 +124,64 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.Use(async (context, next) =>
+{
+    if (context.Request.Headers.ContainsKey("Authorization"))
+    {
+        Console.WriteLine($"Authorization Header: {context.Request.Headers["Authorization"]}");
+    }
+    await next();
+});
+
+app.Use(async (context, next) =>
+{
+    Console.WriteLine($"[REQUEST] {context.Request.Method} {context.Request.Path}");
+
+    if (context.Request.Headers.ContainsKey("Authorization"))
+    {
+        var authHeader = context.Request.Headers["Authorization"].ToString();
+        if (authHeader.Length > 60)
+        {
+            authHeader = authHeader.Substring(0, 30) + "..." + authHeader.Substring(authHeader.Length - 30);
+        }
+        Console.WriteLine($"[HEADER] Authorization: {authHeader}");
+    }
+    else
+    {
+        Console.WriteLine("[HEADER] No Authorization header found");
+    }
+
+    await next();
+
+    Console.WriteLine($"[RESPONSE] Status: {context.Response.StatusCode}");
+});
+
 app.UseHttpsRedirection();
+
+app.Use(async (context, next) =>
+{
+    // Log request information
+    Console.WriteLine($"Request: {context.Request.Method} {context.Request.Path}");
+
+    // Check for and log authorization header
+    if (context.Request.Headers.TryGetValue("Authorization", out var authHeader))
+    {
+        Console.WriteLine($"Authorization header present: {authHeader}");
+    }
+    else
+    {
+        Console.WriteLine("No Authorization header");
+    }
+
+    // Continue processing
+    await next();
+
+    // Log response status
+    Console.WriteLine($"Response status: {context.Response.StatusCode}");
+});
+
+app.UseRouting(); // Add this if not present
+
 app.UseAuthentication(); // Enable JWT Authentication
 app.UseAuthorization();
 

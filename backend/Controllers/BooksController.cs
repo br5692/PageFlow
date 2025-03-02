@@ -2,6 +2,7 @@
 using backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace backend.Controllers
 {
@@ -19,8 +20,8 @@ namespace backend.Controllers
         /// <summary>
         /// Retrieves all books from the database.
         /// </summary>
+        [Authorize]
         [HttpGet]
-        [AllowAnonymous] // Allow unauthenticated users to fetch books
         public async Task<ActionResult<IEnumerable<BookDto>>> GetBooks()
         {
             var books = await _bookService.GetAllBooksAsync();
@@ -39,6 +40,21 @@ namespace backend.Controllers
                 return NotFound(new { message = "Book not found." });
             }
             return Ok(book);
+        }
+
+        [HttpGet("test-auth")]
+        [Authorize]
+        public IActionResult TestAuth()
+        {
+            var identity = HttpContext.User.Identity;
+            var claims = (identity as ClaimsIdentity)?.Claims.Select(c => new { c.Type, c.Value }).ToList();
+
+            return Ok(new
+            {
+                IsAuthenticated = identity?.IsAuthenticated ?? false,
+                UserName = identity?.Name,
+                Claims = claims
+            });
         }
     }
 }
