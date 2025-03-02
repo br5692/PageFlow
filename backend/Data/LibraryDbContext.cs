@@ -1,19 +1,23 @@
 ﻿using backend.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace backend.Data
 {
-    public class LibraryDbContext : DbContext
+    public class LibraryDbContext : IdentityDbContext<LibraryUser, IdentityRole, string>
     {
-        public LibraryDbContext(DbContextOptions<LibraryDbContext> options) : base(options) { }
+        public LibraryDbContext(DbContextOptions<LibraryDbContext> options)
+            : base(options) { }
 
+        // Your custom tables
         public DbSet<Book> Books { get; set; }
-        public DbSet<LibraryUser> LibraryUsers { get; set; }
         public DbSet<Checkout> Checkouts { get; set; }
         public DbSet<Review> Reviews { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // Important to call the base method first
             base.OnModelCreating(modelBuilder);
 
             // Configure relationships
@@ -29,7 +33,7 @@ namespace backend.Data
 
             modelBuilder.Entity<Review>()
                 .HasOne(r => r.Book)
-                .WithMany()
+                .WithMany() // or .WithMany(b => b.Reviews) if you need a Reviews collection on Book
                 .HasForeignKey(r => r.BookId);
 
             modelBuilder.Entity<Review>()

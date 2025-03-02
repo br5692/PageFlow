@@ -13,7 +13,7 @@ namespace backend.Models
         public Book Book { get; set; } = null!;
 
         [ForeignKey("LibraryUser")]
-        public int LibraryUserId { get; set; }
+        public string LibraryUserId { get; set; } = null!;
         public LibraryUser LibraryUser { get; set; } = null!;
 
         [Range(1, 5)]
