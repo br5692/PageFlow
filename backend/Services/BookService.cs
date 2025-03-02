@@ -1,63 +1,149 @@
 ﻿using backend.Data;
 using backend.DTOs;
-using backend.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace backend.Services
+public class BookService : IBookService
 {
-    public class BookService : IBookService
+    private readonly LibraryDbContext _context;
+
+    public BookService(LibraryDbContext context)
     {
-        private readonly LibraryDbContext _context;
+        _context = context;
+    }
 
-        public BookService(LibraryDbContext context)
+    public async Task<IEnumerable<BookDto>> GetAllBooksAsync()
+    {
+        var books = await _context.Books
+            .Include(b => b.Reviews)
+            .Select(b => MapToBookDto(b))
+            .ToListAsync();
+
+        return books;
+    }
+
+    public async Task<BookDto?> GetBookByIdAsync(int id)
+    {
+        var book = await _context.Books
+            .Include(b => b.Reviews)
+            .FirstOrDefaultAsync(b => b.Id == id);
+
+        return book != null ? MapToBookDto(book) : null;
+    }
+
+    public async Task<IEnumerable<BookDto>> SearchBooksAsync(string searchTerm, string? category = null, string? author = null)
+    {
+        var query = _context.Books.AsQueryable();
+
+        if (!string.IsNullOrEmpty(searchTerm))
         {
-            _context = context;
+            query = query.Where(b => b.Title.Contains(searchTerm) || b.Author.Contains(searchTerm));
         }
 
-        /// <summary>
-        /// Retrieves all books from the database.
-        /// </summary>
-        public async Task<IEnumerable<BookDto>> GetAllBooksAsync()
+        if (!string.IsNullOrEmpty(category))
         {
-            var books = await _context.Books
-                .Select(b => new BookDto
-                {
-                    Id = b.Id,
-                    Title = b.Title,
-                    Author = b.Author,
-                    ISBN = b.ISBN,
-                    PublishedDate = b.PublishedDate,
-                    Description = b.Description,
-                    CoverImage = b.CoverImage,
-                    Publisher = b.Publisher,
-                    Category = b.Category,
-                    PageCount = b.PageCount
-                })
-                .ToListAsync();
-
-            return books;
+            query = query.Where(b => b.Category == category);
         }
 
-        public async Task<BookDto?> GetBookByIdAsync(int id)
+        if (!string.IsNullOrEmpty(author))
         {
-            var book = await _context.Books
-                .Where(b => b.Id == id)
-                .Select(b => new BookDto
-                {
-                    Id = b.Id,
-                    Title = b.Title,
-                    Author = b.Author,
-                    ISBN = b.ISBN,
-                    PublishedDate = b.PublishedDate,
-                    Description = b.Description,
-                    Publisher = b.Publisher,
-                    Category = b.Category,
-                    PageCount = b.PageCount,
-                    CoverImage = b.CoverImage
-                })
-                .FirstOrDefaultAsync();
-
-            return book;
+            query = query.Where(b => b.Author.Contains(author));
         }
+
+        return await query
+            .Include(b => b.Reviews)
+            .Select(b => MapToBookDto(b))
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<BookDto>> GetFeaturedBooksAsync(int count)
+    {
+        return await _context.Books
+            .Include(b => b.Reviews)
+            .OrderBy(b => Guid.NewGuid()) // Random order
+            .Take(count)
+            .Select(b => MapToBookDto(b))
+            .ToListAsync();
+    }
+
+    public async Task<BookDto> CreateBookAsync(BookCreateDto bookDto)
+    {
+        var book = new Book
+        {
+            Title = bookDto.Title,
+            Author = bookDto.Author,
+            ISBN = bookDto.ISBN,
+            Description = bookDto.Description,
+            CoverImage = bookDto.CoverImage,
+            Publisher = bookDto.Publisher,
+            PublishedDate = bookDto.PublishedDate,
+            Category = bookDto.Category,
+            PageCount = bookDto.PageCount,
+            IsAvailable = true
+        };
+
+        _context.Books.Add(book);
+        await _context.SaveChangesAsync();
+
+        return MapToBookDto(book);
+    }
+
+    public async Task<BookDto?> UpdateBookAsync(BookUpdateDto bookDto)
+    {
+        var book = await _context.Books.FindAsync(bookDto.Id);
+
+        if (book == null)
+            return null;
+
+        book.Title = bookDto.Title;
+        book.Author = bookDto.Author;
+        book.ISBN = bookDto.ISBN;
+        book.Description = bookDto.Description;
+        book.CoverImage = bookDto.CoverImage;
+        book.Publisher = bookDto.Publisher;
+        book.PublishedDate = bookDto.PublishedDate;
+        book.Category = bookDto.Category;
+        book.PageCount = bookDto.PageCount;
+
+        await _context.SaveChangesAsync();
+
+        return MapToBookDto(book);
+    }
+
+    public async Task<bool> DeleteBookAsync(int id)
+    {
+        var book = await _context.Books.FindAsync(id);
+
+        if (book == null)
+            return false;
+
+        _context.Books.Remove(book);
+        await _context.SaveChangesAsync();
+
+        return true;
+    }
+
+    public async Task<bool> IsBookAvailableAsync(int bookId)
+    {
+        var book = await _context.Books.FindAsync(bookId);
+        return book?.IsAvailable ?? false;
+    }
+
+    private static BookDto MapToBookDto(Book book)
+    {
+        return new BookDto
+        {
+            Id = book.Id,
+            Title = book.Title,
+            Author = book.Author,
+            ISBN = book.ISBN,
+            PublishedDate = book.PublishedDate,
+            Description = book.Description,
+            CoverImage = book.CoverImage,
+            Publisher = book.Publisher,
+            Category = book.Category,
+            PageCount = book.PageCount,
+            IsAvailable = book.IsAvailable,
+            AverageRating = book.Reviews.Any() ? (decimal)book.Reviews.Average(r => r.Rating) : 0
+        };
     }
 }

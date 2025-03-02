@@ -50,7 +50,18 @@ namespace backend.Controllers
             if (!result.Succeeded) return Unauthorized(new { message = "Invalid credentials" });
 
             var token = await _tokenService.GenerateTokenAsync(user);
-            return Ok(new AuthResponseDto { Token = token });
+            var roles = await _userManager.GetRolesAsync(user);
+
+            return Ok(new AuthResponseDto
+            {
+                Success = true,
+                Message = "Login successful",
+                Token = token,
+                UserId = user.Id,
+                UserName = user.UserName,
+                Role = roles.FirstOrDefault() ?? string.Empty,
+                Expiration = DateTime.UtcNow.AddHours(3)
+            });
         }
     }
 }

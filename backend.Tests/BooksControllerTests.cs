@@ -15,11 +15,13 @@ namespace backend.Tests
     {
         private readonly Mock<IBookService> _mockBookService;
         private readonly Mock<ILogger<BooksController>> _mockLogger;
+        private readonly Mock<IReviewService> _mockReviewService;
 
         public BooksControllerTests()
         {
             _mockBookService = new Mock<IBookService>();
             _mockLogger = new Mock<ILogger<BooksController>>();
+            _mockReviewService = new Mock<IReviewService>();
         }
 
         [Fact]
@@ -31,14 +33,13 @@ namespace backend.Tests
                 new BookDto { Id = 1, Title = "Test Book 1", Author = "Test Author 1" },
                 new BookDto { Id = 2, Title = "Test Book 2", Author = "Test Author 2" }
             };
-
             _mockBookService.Setup(x => x.GetAllBooksAsync())
                 .ReturnsAsync(books);
 
-            var controller = new BooksController(_mockBookService.Object);
+            var controller = new BooksController(_mockBookService.Object, _mockReviewService.Object, _mockLogger.Object);
 
             // Act
-            var result = await controller.GetBooks();
+            var result = await controller.GetAllBooks();
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -51,17 +52,16 @@ namespace backend.Tests
         {
             // Arrange
             var book = new BookDto { Id = 1, Title = "Test Book", Author = "Test Author" };
-
             _mockBookService.Setup(x => x.GetBookByIdAsync(1))
                 .ReturnsAsync(book);
 
-            var controller = new BooksController(_mockBookService.Object);
+            var controller = new BooksController(_mockBookService.Object, _mockReviewService.Object, _mockLogger.Object);
 
             // Act
             var result = await controller.GetBookById(1);
 
             // Assert
-            var okResult = Assert.IsType<OkObjectResult>(result);
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
             var returnedBook = Assert.IsType<BookDto>(okResult.Value);
             Assert.Equal("Test Book", returnedBook.Title);
         }
@@ -73,13 +73,14 @@ namespace backend.Tests
             _mockBookService.Setup(x => x.GetBookByIdAsync(999))
                 .ReturnsAsync((BookDto)null);
 
-            var controller = new BooksController(_mockBookService.Object);
+            var controller = new BooksController(_mockBookService.Object, _mockReviewService.Object, _mockLogger.Object);
 
             // Act
             var result = await controller.GetBookById(999);
 
             // Assert
-            Assert.IsType<NotFoundObjectResult>(result);
+            // Your controller returns NotFoundResult, not NotFoundObjectResult
+            Assert.IsType<NotFoundResult>(result.Result);
         }
     }
 }

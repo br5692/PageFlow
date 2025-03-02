@@ -91,6 +91,8 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<DbSeeder>();
 builder.Services.AddScoped<IBookService, BookService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IReviewService, ReviewService>();
+builder.Services.AddScoped<ICheckoutService, CheckoutService>();
 builder.Services.AddHttpClient();
 
 builder.Services.AddEndpointsApiExplorer();

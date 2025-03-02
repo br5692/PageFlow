@@ -42,21 +42,16 @@ namespace backend.Tests
         public async Task Login_WithValidCredentials_ReturnsOkResult()
         {
             // Arrange
-            var email = "test@example.com";
-            var password = "Password123!";
+            var user = new LibraryUser { Id = "user1", UserName = "test@example.com", Email = "test@example.com" };
+            var loginDto = new LoginDto { Email = "test@example.com", Password = "Password123!" };
 
-            var user = new LibraryUser { UserName = email, Email = email };
-            var loginDto = new LoginDto { Email = email, Password = password };
+            _mockUserManager.Setup(x => x.FindByEmailAsync(loginDto.Email)).ReturnsAsync(user);
+            _mockSignInManager.Setup(x => x.CheckPasswordSignInAsync(user, loginDto.Password, false))
+                             .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
+            _mockTokenService.Setup(x => x.GenerateTokenAsync(user)).ReturnsAsync("test-token");
 
-            _mockUserManager.Setup(x => x.FindByEmailAsync(email))
-                .ReturnsAsync(user);
-
-            _mockSignInManager
-                .Setup(x => x.CheckPasswordSignInAsync(user, password, false))
-                .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
-
-            _mockTokenService.Setup(x => x.GenerateTokenAsync(user))
-                .ReturnsAsync("test-token");
+            // Setup GetRolesAsync to return a list of roles
+            _mockUserManager.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Customer" });
 
             var controller = new AuthController(
                 _mockUserManager.Object,
@@ -69,6 +64,7 @@ namespace backend.Tests
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
             var authResponse = Assert.IsType<AuthResponseDto>(okResult.Value);
+            Assert.True(authResponse.Success);
             Assert.Equal("test-token", authResponse.Token);
         }
 

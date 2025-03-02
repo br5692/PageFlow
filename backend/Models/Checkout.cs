@@ -16,7 +16,8 @@ namespace backend.Models
         public string LibraryUserId { get; set; } = null!;
         public LibraryUser LibraryUser { get; set; } = null!;
 
-        public DateTime CheckoutDate { get; set; }
+        public DateTime CheckoutDate { get; set; } = DateTime.UtcNow;
+        public DateTime DueDate { get; set; }
         public DateTime? ReturnDate { get; set; }
     }
 }
