@@ -1,22 +1,20 @@
 ﻿using backend.Models;
-using backend.Services;
+using Bogus;
 
 namespace backend.Data
 {
     public class DbSeeder
     {
         private readonly LibraryDbContext _dbContext;
-        private readonly GoogleBooksService _googleBooksService;
 
-        public DbSeeder(LibraryDbContext dbContext, GoogleBooksService googleBooksService)
+        public DbSeeder(LibraryDbContext dbContext)
         {
             _dbContext = dbContext;
-            _googleBooksService = googleBooksService;
         }
 
         /// <summary>
-        /// Seeds the database with books. Attempts to fetch from Google Books API first.
-        /// If the API call fails, fallback mock data is inserted instead.
+        /// Seeds the database with books using Bogus for randomized data generation.
+        /// Only seeds if the database is empty.
         /// </summary>
         public async Task SeedAsync()
         {
@@ -29,53 +27,27 @@ namespace backend.Data
                     return;
                 }
 
-                if (!_dbContext.Books.Any()) // If no books exist, seed the data
+                // Only seed if there are no books in the database
+                if (!_dbContext.Books.Any())
                 {
-                    Console.WriteLine("No books found in the database. Fetching from Google Books API...");
+                    Console.WriteLine("No books found in the database. Seeding with Bogus-generated books...");
 
-                    // Attempt to fetch from Google Books API
-                    try
-                    {
-                        await _googleBooksService.FetchAndSaveBooksAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Google Books API fetch failed: {ex.Message}");
-                        Console.WriteLine("Falling back to mock book data...");
+                    var faker = new Faker<Book>()
+                        .RuleFor(b => b.Title, f => f.Lorem.Sentence(3, 5))
+                        .RuleFor(b => b.Author, f => f.Name.FullName())
+                        .RuleFor(b => b.Description, f => f.Lorem.Paragraph())
+                        .RuleFor(b => b.ISBN, f => f.Random.Replace("###-##########"))
+                        .RuleFor(b => b.Publisher, f => f.Company.CompanyName())
+                        .RuleFor(b => b.PublishedDate, f => f.Date.Past(10))
+                        .RuleFor(b => b.Category, f => f.Commerce.Categories(1).First())
+                        .RuleFor(b => b.PageCount, f => f.Random.Int(100, 600))
+                        .RuleFor(b => b.CoverImage, f => f.Image.PicsumUrl());
 
-                        var fallbackBooks = new List<Book>
-                        {
-                            new Book
-                            {
-                                Title = "Sample Book Title",
-                                Author = "Sample Author",
-                                Description = "Sample Description",
-                                ISBN = "1234567890",
-                                Publisher = "Sample Publisher",
-                                PublishedDate = DateTime.Parse("2020-01-01"),
-                                Category = "Sample Category",
-                                PageCount = 200,
-                                CoverImage = "https://example.com/cover.jpg"
-                            },
-                            new Book
-                            {
-                                Title = "Another Sample Book",
-                                Author = "Another Author",
-                                Description = "A backup book in case API fails",
-                                ISBN = "0987654321",
-                                Publisher = "Backup Publisher",
-                                PublishedDate = DateTime.UtcNow,
-                                Category = "Fallback",
-                                PageCount = 150,
-                                CoverImage = "https://example.com/cover2.jpg"
-                            }
-                        };
+                    var fakeBooks = faker.Generate(50); // Generate 50 fake books
+                    _dbContext.Books.AddRange(fakeBooks);
+                    await _dbContext.SaveChangesAsync();
 
-                        _dbContext.Books.AddRange(fallbackBooks);
-                        await _dbContext.SaveChangesAsync();
-
-                        Console.WriteLine("Fallback books added successfully.");
-                    }
+                    Console.WriteLine("Successfully seeded database with 50 Bogus-generated books.");
                 }
                 else
                 {

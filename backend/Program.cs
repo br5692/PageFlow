@@ -20,7 +20,7 @@ builder.Services.AddIdentity<LibraryUser, IdentityRole>()
     .AddDefaultTokenProviders();
 
 // Register services
-builder.Services.AddScoped<GoogleBooksService>(); // Google Books API Service
+builder.Services.AddScoped<DbSeeder>(); // Register the database seeder
 builder.Services.AddHttpClient(); // HttpClient for API calls
 
 // Configure Swagger
@@ -47,9 +47,9 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<LibraryDbContext>();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    var googleBooksService = scope.ServiceProvider.GetRequiredService<GoogleBooksService>();
+    var dbSeeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
 
-    await InitializeDatabase(dbContext, roleManager, googleBooksService);
+    await InitializeDatabase(dbContext, roleManager, dbSeeder);
 }
 
 app.Run();
@@ -57,7 +57,7 @@ app.Run();
 /// <summary>
 /// Ensures database is connected, roles are created, and books are seeded.
 /// </summary>
-async Task InitializeDatabase(LibraryDbContext dbContext, RoleManager<IdentityRole> roleManager, GoogleBooksService googleBooksService)
+async Task InitializeDatabase(LibraryDbContext dbContext, RoleManager<IdentityRole> roleManager, DbSeeder dbSeeder)
 {
     try
     {
@@ -75,11 +75,8 @@ async Task InitializeDatabase(LibraryDbContext dbContext, RoleManager<IdentityRo
             }
         }
 
-        // Seed books only if the database is empty
-        if (!dbContext.Books.Any())
-        {
-            await googleBooksService.FetchAndSaveBooksAsync();
-        }
+        // Seed books using Bogus
+        await dbSeeder.SeedAsync();
     }
     catch (Exception ex)
     {
