@@ -10,12 +10,6 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-Console.WriteLine("=== Configuration Check ===");
-Console.WriteLine($"JWT Key from config: {builder.Configuration["Jwt:Key"]?.Substring(0, 5)}... (length: {builder.Configuration["Jwt:Key"]?.Length})");
-Console.WriteLine($"JWT Issuer from config: {builder.Configuration["Jwt:Issuer"]}");
-Console.WriteLine($"Connection string: {builder.Configuration.GetConnectionString("LibraryDB")?.Substring(0, 20)}...");
-Console.WriteLine("=========================");
-
 // Add services to the container.
 builder.Services.AddControllers();
 
@@ -27,7 +21,7 @@ builder.Services.AddDbContext<LibraryDbContext>(options =>
 // Configure ASP.NET Identity
 builder.Services.AddIdentity<LibraryUser, IdentityRole>(options =>
 {
-    options.SignIn.RequireConfirmedAccount = false; // Optional, depends on if you need email confirmation
+    options.SignIn.RequireConfirmedAccount = false;
 })
 .AddEntityFrameworkStores<LibraryDbContext>()
 .AddDefaultTokenProviders();
@@ -52,28 +46,16 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    var keyBytes = Encoding.UTF8.GetBytes(jwtKey);
-
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
         ValidateIssuer = true,
         ValidIssuer = jwtIssuer,
         ValidateAudience = true,
         ValidAudience = jwtIssuer,
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
-    };
-
-    // For debugging
-    options.Events = new JwtBearerEvents
-    {
-        OnAuthenticationFailed = context =>
-        {
-            Console.WriteLine($"Auth failed: {context.Exception.Message}");
-            return Task.CompletedTask;
-        }
     };
 });
 
@@ -88,7 +70,7 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Enter 'Bearer {your_token}' below (without quotes)"
+        Description = "Enter your JWT token in the text input below."
     });
 
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -106,14 +88,12 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddAuthorization();
 
 // Register services
-builder.Services.AddScoped<DbSeeder>(); // Register database seeder
-builder.Services.AddScoped<IBookService, BookService>(); // Register Book service
-builder.Services.AddScoped<ITokenService, TokenService>(); // Register Token service
-builder.Services.AddHttpClient(); // HttpClient for external API calls
+builder.Services.AddScoped<DbSeeder>();
+builder.Services.AddScoped<IBookService, BookService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddHttpClient();
 
-// Configure Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
@@ -124,65 +104,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.Use(async (context, next) =>
-{
-    if (context.Request.Headers.ContainsKey("Authorization"))
-    {
-        Console.WriteLine($"Authorization Header: {context.Request.Headers["Authorization"]}");
-    }
-    await next();
-});
-
-app.Use(async (context, next) =>
-{
-    Console.WriteLine($"[REQUEST] {context.Request.Method} {context.Request.Path}");
-
-    if (context.Request.Headers.ContainsKey("Authorization"))
-    {
-        var authHeader = context.Request.Headers["Authorization"].ToString();
-        if (authHeader.Length > 60)
-        {
-            authHeader = authHeader.Substring(0, 30) + "..." + authHeader.Substring(authHeader.Length - 30);
-        }
-        Console.WriteLine($"[HEADER] Authorization: {authHeader}");
-    }
-    else
-    {
-        Console.WriteLine("[HEADER] No Authorization header found");
-    }
-
-    await next();
-
-    Console.WriteLine($"[RESPONSE] Status: {context.Response.StatusCode}");
-});
-
 app.UseHttpsRedirection();
+app.UseRouting();
 
-app.Use(async (context, next) =>
-{
-    // Log request information
-    Console.WriteLine($"Request: {context.Request.Method} {context.Request.Path}");
-
-    // Check for and log authorization header
-    if (context.Request.Headers.TryGetValue("Authorization", out var authHeader))
-    {
-        Console.WriteLine($"Authorization header present: {authHeader}");
-    }
-    else
-    {
-        Console.WriteLine("No Authorization header");
-    }
-
-    // Continue processing
-    await next();
-
-    // Log response status
-    Console.WriteLine($"Response status: {context.Response.StatusCode}");
-});
-
-app.UseRouting(); // Add this if not present
-
-app.UseAuthentication(); // Enable JWT Authentication
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
@@ -200,9 +125,6 @@ using (var scope = app.Services.CreateScope())
 
 app.Run();
 
-/// <summary>
-/// Ensures database is connected, roles are created, and books are seeded.
-/// </summary>
 async Task InitializeDatabase(LibraryDbContext dbContext, RoleManager<IdentityRole> roleManager, UserManager<LibraryUser> userManager, DbSeeder dbSeeder)
 {
     try
@@ -238,7 +160,7 @@ async Task InitializeDatabase(LibraryDbContext dbContext, RoleManager<IdentityRo
             }
         }
 
-        // Seed books using Bogus
+        // Seed books
         await dbSeeder.SeedAsync();
     }
     catch (Exception ex)
