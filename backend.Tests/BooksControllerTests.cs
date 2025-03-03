@@ -33,7 +33,7 @@ namespace backend.Tests
                 new BookDto { Id = 1, Title = "Test Book 1", Author = "Test Author 1" },
                 new BookDto { Id = 2, Title = "Test Book 2", Author = "Test Author 2" }
             };
-            _mockBookService.Setup(x => x.GetAllBooksAsync())
+            _mockBookService.Setup(x => x.GetAllBooksAsync(null, true))
                 .ReturnsAsync(books);
 
             var controller = new BooksController(_mockBookService.Object, _mockReviewService.Object, _mockLogger.Object);

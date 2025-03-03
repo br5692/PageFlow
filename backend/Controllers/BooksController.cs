@@ -25,23 +25,21 @@ namespace backend.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<BookDto>>> GetAllBooks()
+        public async Task<ActionResult<IEnumerable<BookDto>>> GetAllBooks(
+            [FromQuery] string? sortBy = null,
+            [FromQuery] bool ascending = true
+            )
         {
             try
             {
                 _logger.LogInformation("Getting all books");
-                var books = await _bookService.GetAllBooksAsync();
+                var books = await _bookService.GetAllBooksAsync(sortBy, ascending);
                 return Ok(books);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting all books: {Message}", ex.Message);
-
-                // During development, return the actual error message
-                if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
-                    return StatusCode(500, $"Internal server error: {ex.Message}");
-                else
-                    return StatusCode(500, "Internal server error");
+                return StatusCode(500, "Internal server error");
             }
         }
 
@@ -65,12 +63,15 @@ namespace backend.Controllers
             [FromQuery] string query = "",
             [FromQuery] string? category = null,
             [FromQuery] string? author = null,
-            [FromQuery] bool? isAvailable = null
+            [FromQuery] bool? isAvailable = null,
+            [FromQuery] string? sortBy = null,
+            [FromQuery] bool ascending = true
             )
         {
             try
             {
-                var books = await _bookService.SearchBooksAsync(query, category, author, isAvailable);
+                var books = await _bookService.SearchBooksAsync(
+                    query, category, author, isAvailable, sortBy, ascending);
                 return Ok(books);
             }
             catch (Exception ex)

@@ -33,7 +33,7 @@ namespace backend.Data
 
             modelBuilder.Entity<Review>()
                 .HasOne(r => r.Book)
-                .WithMany() // or .WithMany(b => b.Reviews) if you need a Reviews collection on Book
+                .WithMany(b => b.Reviews)
                 .HasForeignKey(r => r.BookId);
 
             modelBuilder.Entity<Review>()

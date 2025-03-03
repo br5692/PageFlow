@@ -146,7 +146,7 @@ async Task InitializeDatabase(LibraryDbContext dbContext, RoleManager<IdentityRo
         }
 
         // Create a default Librarian user if none exists
-        if (!userManager.Users.Any())
+        if (!userManager.Users.Any(u => u.UserName == "admin@library.com"))
         {
             var librarian = new LibraryUser
             {
@@ -162,7 +162,24 @@ async Task InitializeDatabase(LibraryDbContext dbContext, RoleManager<IdentityRo
             }
         }
 
-        // Seed books
+        // Create a default Customer user if none exists
+        if (!userManager.Users.Any(u => u.UserName == "customer@library.com"))
+        {
+            var customer = new LibraryUser
+            {
+                UserName = "customer@library.com",
+                Email = "customer@library.com"
+            };
+
+            var result = await userManager.CreateAsync(customer, "Customer@123");
+            if (result.Succeeded)
+            {
+                await userManager.AddToRoleAsync(customer, "Customer");
+                Console.WriteLine("Default customer account created: customer@library.com / Customer@123");
+            }
+        }
+
+        // Seed books and reviews
         await dbSeeder.SeedAsync();
     }
     catch (Exception ex)

@@ -11,14 +11,26 @@ public class BookService : IBookService
         _context = context;
     }
 
-    public async Task<IEnumerable<BookDto>> GetAllBooksAsync()
+    public async Task<IEnumerable<BookDto>> GetAllBooksAsync(string? sortBy = null, bool ascending = true)
     {
-        var books = await _context.Books
+        var query = _context.Books.AsQueryable();
+
+        // Apply sorting if specified
+        if (!string.IsNullOrEmpty(sortBy))
+        {
+            query = sortBy.ToLower() switch
+            {
+                "title" => ascending ? query.OrderBy(b => b.Title) : query.OrderByDescending(b => b.Title),
+                "author" => ascending ? query.OrderBy(b => b.Author) : query.OrderByDescending(b => b.Author),
+                "availability" => ascending ? query.OrderBy(b => b.IsAvailable) : query.OrderByDescending(b => b.IsAvailable),
+                _ => query.OrderBy(b => b.Id)
+            };
+        }
+
+        return await query
             .Include(b => b.Reviews)
             .Select(b => MapToBookDto(b))
             .ToListAsync();
-
-        return books;
     }
 
     public async Task<BookDto?> GetBookByIdAsync(int id)
@@ -30,35 +42,50 @@ public class BookService : IBookService
         return book != null ? MapToBookDto(book) : null;
     }
 
-    public async Task<IEnumerable<BookDto>> SearchBooksAsync(string searchTerm, string? category = null, string? author = null, bool? isAvailable = null)
+    public async Task<IEnumerable<BookDto>> SearchBooksAsync(
+        string searchTerm,
+        string? category = null,
+        string? author = null,
+        bool? isAvailable = null,
+        string? sortBy = null,
+        bool ascending = true
+        )
     {
         var query = _context.Books.AsQueryable();
 
-        // Search by title or author
+        // Apply filters
         if (!string.IsNullOrEmpty(searchTerm))
         {
             query = query.Where(b => b.Title.Contains(searchTerm) || b.Author.Contains(searchTerm));
         }
 
-        // Filter by category
         if (!string.IsNullOrEmpty(category))
         {
             query = query.Where(b => b.Category == category);
         }
 
-        // Filter by author
         if (!string.IsNullOrEmpty(author))
         {
             query = query.Where(b => b.Author.Contains(author));
         }
 
-        // Filter by availability
         if (isAvailable.HasValue)
         {
             query = query.Where(b => b.IsAvailable == isAvailable.Value);
         }
 
-        // Include reviews for average rating calculation
+        // Apply sorting if specified
+        if (!string.IsNullOrEmpty(sortBy))
+        {
+            query = sortBy.ToLower() switch
+            {
+                "title" => ascending ? query.OrderBy(b => b.Title) : query.OrderByDescending(b => b.Title),
+                "author" => ascending ? query.OrderBy(b => b.Author) : query.OrderByDescending(b => b.Author),
+                "availability" => ascending ? query.OrderBy(b => b.IsAvailable) : query.OrderByDescending(b => b.IsAvailable),
+                _ => query.OrderBy(b => b.Id)
+            };
+        }
+
         return await query
             .Include(b => b.Reviews)
             .Select(b => MapToBookDto(b))
