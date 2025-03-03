@@ -34,6 +34,13 @@ namespace backend.Services
 
         public async Task<ReviewDto> CreateReviewAsync(string userId, ReviewCreateDto reviewDto)
         {
+            // Add this check to validate the book exists
+            var bookExists = await _context.Books.AnyAsync(b => b.Id == reviewDto.BookId);
+            if (!bookExists)
+            {
+                throw new InvalidOperationException($"Book with ID {reviewDto.BookId} does not exist");
+            }
+
             // Check if user has already reviewed this book
             if (await HasUserReviewedBookAsync(userId, reviewDto.BookId))
             {
