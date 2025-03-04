@@ -14,7 +14,7 @@ import {
   InputAdornment,
   IconButton,
 } from '@mui/material';
-import { Search, Clear } from '@mui/icons-material'; // Add Clear import
+import { Search, Clear } from '@mui/icons-material';
 import debounce from 'lodash/debounce';
 import { BookDto, BookFilterParams } from '../../types/book.types';
 import { bookService } from '../../services/bookService';
@@ -28,7 +28,6 @@ interface BookListProps {
 }
 
 const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 10 }) => {
-  // Add separate state for the search input text
   const [searchText, setSearchText] = useState('');
   const [books, setBooks] = useState<BookDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -41,17 +40,18 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
     ascending: true,
   });
   
-  // Rest of your state variables...
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const [allAuthors, setAllAuthors] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [authors, setAuthors] = useState<string[]>([]);
   
+  // Add state to track if search was active
+  const [searchWasActive, setSearchWasActive] = useState(false);
+  
   const { showAlert } = useAlert();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // First effect to fetch all available categories and authors once
-  // (Keep this unchanged)
+  // First effect - unchanged
   useEffect(() => {
     const fetchAllOptions = async () => {
       try {
@@ -71,11 +71,15 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
     }
   }, [featured]);
 
-  // Second effect to fetch filtered books based on search parameters
-  // (Keep this unchanged)
+  // Second effect - modified to track loading state changes
   useEffect(() => {
     const fetchBooks = async () => {
       setLoading(true);
+      // Set flag that we'll need to restore focus when loading completes
+      if (searchInputRef.current === document.activeElement) {
+        setSearchWasActive(true);
+      }
+      
       try {
         let fetchedBooks: BookDto[];
         
@@ -89,7 +93,6 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
         
         setBooks(fetchedBooks);
         
-        // Update current filter lists
         if (!featured) {
           const uniqueCategories = [...new Set(fetchedBooks.map(book => book.category).filter(Boolean))];
           const uniqueAuthors = [...new Set(fetchedBooks.map(book => book.author))];
@@ -105,14 +108,17 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
     };
 
     fetchBooks();
-  }, [
-    featured,
-    featuredCount,
-    searchParams,
-    showAlert,
-  ]);
+  }, [featured, featuredCount, searchParams, showAlert]);
 
-  // Debounced search function - update to use the new searchText
+  // Effect to restore focus after loading completes
+  useEffect(() => {
+    if (!loading && searchWasActive && searchInputRef.current) {
+      searchInputRef.current.focus();
+      setSearchWasActive(false);
+    }
+  }, [loading, searchWasActive]);
+
+  // Debounced search function
   const debouncedSearch = useCallback(
     debounce((value: string) => {
       setSearchParams(prev => ({ ...prev, query: value }));
@@ -120,14 +126,12 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
     []
   );
 
-  // Input handlers - modify to use searchText
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
-    setSearchText(value); // Update the local state immediately
-    debouncedSearch(value); // Debounce the search query update
+    setSearchText(value);
+    debouncedSearch(value);
   };
 
-  // Function to handle search clearing
   const handleClearSearch = () => {
     setSearchText('');
     setSearchParams(prev => ({ ...prev, query: '' }));
@@ -137,7 +141,6 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
     }
   };
 
-  // Keep the other handlers unchanged
   const handleSortChange = (event: SelectChangeEvent) => {
     setSearchParams({ ...searchParams, sortBy: event.target.value });
   };
@@ -158,9 +161,6 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
     setSearchParams({ ...searchParams, isAvailable: event.target.checked ? true : undefined });
   };
 
-  // Remove the third useEffect for query changes - it's no longer needed since we're
-  // handling query changes through the debounced function
-
   if (loading) {
     return <Loading />;
   }
@@ -176,7 +176,7 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
                 fullWidth
                 label="Search Books"
                 variant="outlined"
-                value={searchText} // Use the local state value
+                value={searchText}
                 onChange={handleSearchChange}
                 InputProps={{
                   startAdornment: (
@@ -184,7 +184,6 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
                       <Search />
                     </InputAdornment>
                   ),
-                  // Add a clear button when there's search text
                   endAdornment: searchText ? (
                     <InputAdornment position="end">
                       <IconButton
@@ -200,7 +199,7 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
               />
             </Grid>
             
-            {/* Rest of your UI components remain unchanged */}
+            {/* Rest of the UI components remain unchanged */}
             <Grid item xs={12} sm={6} md={2}>
               <FormControl fullWidth>
                 <InputLabel id="category-label">Category</InputLabel>
