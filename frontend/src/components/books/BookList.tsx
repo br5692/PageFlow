@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Grid,
   TextField,
@@ -12,15 +12,15 @@ import {
   FormControlLabel,
   Checkbox,
   InputAdornment,
+  IconButton,
 } from '@mui/material';
-import { Search } from '@mui/icons-material';
+import { Search, Clear } from '@mui/icons-material'; // Add Clear import
+import debounce from 'lodash/debounce';
 import { BookDto, BookFilterParams } from '../../types/book.types';
 import { bookService } from '../../services/bookService';
 import BookCard from './BookCard';
 import Loading from '../common/Loading';
 import { useAlert } from '../../context/AlertContext';
-
-export {};
 
 interface BookListProps {
   featured?: boolean;
@@ -28,6 +28,8 @@ interface BookListProps {
 }
 
 const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 10 }) => {
+  // Add separate state for the search input text
+  const [searchText, setSearchText] = useState('');
   const [books, setBooks] = useState<BookDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchParams, setSearchParams] = useState<BookFilterParams>({
@@ -38,10 +40,39 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
     sortBy: 'title',
     ascending: true,
   });
+  
+  // Rest of your state variables...
+  const [allCategories, setAllCategories] = useState<string[]>([]);
+  const [allAuthors, setAllAuthors] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [authors, setAuthors] = useState<string[]>([]);
+  
   const { showAlert } = useAlert();
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // First effect to fetch all available categories and authors once
+  // (Keep this unchanged)
+  useEffect(() => {
+    const fetchAllOptions = async () => {
+      try {
+        const allBooks = await bookService.getAllBooks();
+        const uniqueCategories = [...new Set(allBooks.map(book => book.category).filter(Boolean))];
+        const uniqueAuthors = [...new Set(allBooks.map(book => book.author))];
+        
+        setAllCategories(uniqueCategories as string[]);
+        setAllAuthors(uniqueAuthors);
+      } catch (error) {
+        console.error('Failed to load filter options:', error);
+      }
+    };
+
+    if (!featured) {
+      fetchAllOptions();
+    }
+  }, [featured]);
+
+  // Second effect to fetch filtered books based on search parameters
+  // (Keep this unchanged)
   useEffect(() => {
     const fetchBooks = async () => {
       setLoading(true);
@@ -58,7 +89,7 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
         
         setBooks(fetchedBooks);
         
-        // Extract unique categories and authors for filters
+        // Update current filter lists
         if (!featured) {
           const uniqueCategories = [...new Set(fetchedBooks.map(book => book.category).filter(Boolean))];
           const uniqueAuthors = [...new Set(fetchedBooks.map(book => book.author))];
@@ -77,19 +108,36 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
   }, [
     featured,
     featuredCount,
-    searchParams.query,
-    searchParams.category,
-    searchParams.author,
-    searchParams.isAvailable,
-    searchParams.sortBy,
-    searchParams.ascending,
+    searchParams,
     showAlert,
   ]);
 
+  // Debounced search function - update to use the new searchText
+  const debouncedSearch = useCallback(
+    debounce((value: string) => {
+      setSearchParams(prev => ({ ...prev, query: value }));
+    }, 300),
+    []
+  );
+
+  // Input handlers - modify to use searchText
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchParams({ ...searchParams, query: event.target.value });
+    const value = event.target.value;
+    setSearchText(value); // Update the local state immediately
+    debouncedSearch(value); // Debounce the search query update
   };
 
+  // Function to handle search clearing
+  const handleClearSearch = () => {
+    setSearchText('');
+    setSearchParams(prev => ({ ...prev, query: '' }));
+    // Focus the input after clearing
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
+
+  // Keep the other handlers unchanged
   const handleSortChange = (event: SelectChangeEvent) => {
     setSearchParams({ ...searchParams, sortBy: event.target.value });
   };
@@ -110,6 +158,9 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
     setSearchParams({ ...searchParams, isAvailable: event.target.checked ? true : undefined });
   };
 
+  // Remove the third useEffect for query changes - it's no longer needed since we're
+  // handling query changes through the debounced function
+
   if (loading) {
     return <Loading />;
   }
@@ -121,10 +172,11 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
           <Grid container spacing={2}>
             <Grid item xs={12} md={4}>
               <TextField
+                inputRef={searchInputRef}
                 fullWidth
                 label="Search Books"
                 variant="outlined"
-                value={searchParams.query || ''}
+                value={searchText} // Use the local state value
                 onChange={handleSearchChange}
                 InputProps={{
                   startAdornment: (
@@ -132,10 +184,23 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
                       <Search />
                     </InputAdornment>
                   ),
+                  // Add a clear button when there's search text
+                  endAdornment: searchText ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="clear search"
+                        onClick={handleClearSearch}
+                        edge="end"
+                      >
+                        <Clear />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
                 }}
               />
             </Grid>
             
+            {/* Rest of your UI components remain unchanged */}
             <Grid item xs={12} sm={6} md={2}>
               <FormControl fullWidth>
                 <InputLabel id="category-label">Category</InputLabel>
@@ -146,7 +211,7 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
                   onChange={handleCategoryChange}
                 >
                   <MenuItem value="">All Categories</MenuItem>
-                  {categories.map((category) => (
+                  {allCategories.map((category) => (
                     <MenuItem key={category} value={category}>
                       {category}
                     </MenuItem>
@@ -165,7 +230,7 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
                   onChange={handleAuthorChange}
                 >
                   <MenuItem value="">All Authors</MenuItem>
-                  {authors.map((author) => (
+                  {allAuthors.map((author) => (
                     <MenuItem key={author} value={author}>
                       {author}
                     </MenuItem>
