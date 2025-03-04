@@ -1,4 +1,3 @@
-// src/components/books/BookDetails.tsx
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -11,15 +10,16 @@ import {
   Paper,
   Alert,
   Skeleton,
+  Stack,
+  Card,
 } from '@mui/material';
 import {
-  CalendarToday,
   MenuBook,
-  Category,
-  Numbers,
-  Store,
+  CalendarToday,
+  LocalLibrary,
   Edit,
   Delete,
+  ArrowBack,
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { BookDto } from '../../types/book.types';
@@ -154,160 +154,176 @@ const BookDetails: React.FC = () => {
   }
 
   return (
-    <Paper elevation={2} sx={{ p: { xs: 2, md: 3 } }}>
-      <Grid container spacing={4}>
-        {/* Book Cover */}
-        <Grid item xs={12} md={3}>
-          <Box
-            component="img"
-            src={book.coverImage || 'https://via.placeholder.com/300x450?text=No+Cover'}
-            alt={book.title}
-            sx={{
-              width: '100%',
-              maxHeight: 450,
-              objectFit: 'contain',
-              borderRadius: 1,
-              boxShadow: 3,
-            }}
-          />
-        </Grid>
+    <Box>
+      {/* Back button */}
+      <Button 
+        startIcon={<ArrowBack />} 
+        onClick={() => navigate('/books')} 
+        sx={{ mb: 2 }}
+      >
+        Back to Books
+      </Button>
 
-        {/* Book Details */}
-        <Grid item xs={12} md={9}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-            <Box sx={{ pr: 2, flex: '1 1 auto' }}>
-              <Typography variant="h4" component="h1" gutterBottom>
-                {book.title}
-              </Typography>
-              <Typography variant="h6" gutterBottom color="text.secondary">
-                by {book.author}
-              </Typography>
-            </Box>
-            <Box sx={{ mb: { xs: 2, md: 0 } }}>
-              <Chip
-                label={book.isAvailable ? 'Available' : 'Checked Out'}
-                color={book.isAvailable ? 'success' : 'error'}
-                sx={{ fontWeight: 'bold', mb: 1 }}
-              />
-            </Box>
-          </Box>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Rating value={book.averageRating} precision={0.5} readOnly />
-            <Typography variant="body2" sx={{ ml: 1 }}>
-              ({book.averageRating.toFixed(1)})
-            </Typography>
-          </Box>
-
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={6}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <CalendarToday fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                <Typography variant="body2">
-                  <strong>Published:</strong> {formatDate(book.publishedDate)}
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Store fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                <Typography variant="body2">
-                  <strong>Publisher:</strong> {book.publisher || 'Unknown'}
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <MenuBook fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                <Typography variant="body2">
-                  <strong>ISBN:</strong> {book.isbn || 'N/A'}
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Numbers fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                <Typography variant="body2">
-                  <strong>Pages:</strong> {book.pageCount}
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Category fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                <Typography variant="body2">
-                  <strong>Category:</strong> {book.category || 'Uncategorized'}
-                </Typography>
-              </Box>
-            </Grid>
+      {/* Main content */}
+      <Paper elevation={2} sx={{ p: { xs: 2, md: 3 }, mb: 4 }}>
+        <Grid container spacing={4}>
+          {/* Book Cover */}
+          <Grid item xs={12} md={3}>
+            <Box
+              component="img"
+              src={book.coverImage || 'https://via.placeholder.com/300x450?text=No+Cover'}
+              alt={book.title}
+              sx={{
+                width: '100%',
+                maxHeight: 450,
+                objectFit: 'contain',
+                borderRadius: 1,
+                boxShadow: 3,
+              }}
+            />
           </Grid>
 
-          <Typography variant="h6" gutterBottom>
-            Description
-          </Typography>
-          <Typography variant="body1" paragraph>
-            {book.description || 'No description available.'}
-          </Typography>
+          {/* Book Details */}
+          <Grid item xs={12} md={9}>
+            <Stack spacing={2}>
+              {/* Book header - combines important info in a prominent way */}
+              <Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+                    {book.title}
+                  </Typography>
+                  <Chip
+                    label={book.isAvailable ? 'Available' : 'Checked Out'}
+                    color={book.isAvailable ? 'success' : 'error'}
+                    size="medium"
+                    sx={{ fontWeight: 'bold', fontSize: '0.9rem' }}
+                  />
+                </Box>
+                
+                <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                  by {book.author}
+                </Typography>
+                
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Rating value={book.averageRating} precision={0.5} readOnly />
+                  <Typography variant="body1" sx={{ ml: 1, fontWeight: 'medium' }}>
+                    {book.averageRating.toFixed(1)} out of 5
+                  </Typography>
+                </Box>
+              </Box>
 
-          <Box sx={{ mt: 3, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-            {isAuthenticated && isCustomer && book.isAvailable && (
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleCheckout}
-                disabled={checkingOut}
-                sx={{ minWidth: 150 }}
-              >
-                {checkingOut ? 'Checking out...' : 'Check Out Book'}
-              </Button>
-            )}
+              {/* Key book metadata in a card format */}
+              <Card variant="outlined" sx={{ p: 2, bgcolor: 'background.default' }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <CalendarToday fontSize="small" sx={{ mr: 1, color: 'primary.main' }} />
+                      <Typography variant="body1">
+                        Published in {new Date(book.publishedDate).getFullYear()}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <MenuBook fontSize="small" sx={{ mr: 1, color: 'primary.main' }} />
+                      <Typography variant="body1">
+                        {book.pageCount} pages
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  {book.category && (
+                    <Grid item xs={12} sm={6} md={4}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <LocalLibrary fontSize="small" sx={{ mr: 1, color: 'primary.main' }} />
+                        <Typography variant="body1">
+                          {book.category}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  )}
+                </Grid>
 
-            {isAuthenticated && isLibrarian && (
-              <>
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  startIcon={<Edit />}
-                  onClick={handleEditBook}
-                >
-                  Edit Book
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  startIcon={<Delete />}
-                  onClick={handleDeleteBook}
-                >
-                  Delete Book
-                </Button>
-              </>
-            )}
+                {/* Publisher and ISBN in a more human-readable format */}
+                <Box sx={{ mt: 2 }}>
+                  {book.publisher && (
+                    <Typography variant="body2" color="text.secondary">
+                      Published by {book.publisher}
+                      {book.isbn ? ` • ISBN: ${book.isbn}` : ''}
+                    </Typography>
+                  )}
+                </Box>
+              </Card>
 
-            <Button
-              variant="outlined"
-              onClick={() => navigate('/books')}
-            >
-              Back to Books
-            </Button>
-          </Box>
+              {/* Description */}
+              <Box>
+                <Typography variant="h6" gutterBottom fontWeight="medium">
+                  About this book
+                </Typography>
+                <Typography variant="body1" paragraph>
+                  {book.description || 'No description available.'}
+                </Typography>
+              </Box>
+
+              {/* Action buttons */}
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1 }}>
+                {isAuthenticated && isCustomer && book.isAvailable && (
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleCheckout}
+                    disabled={checkingOut}
+                    size="large"
+                    sx={{ 
+                      minWidth: 200,
+                      fontWeight: 'bold',
+                      py: 1
+                    }}
+                  >
+                    {checkingOut ? 'Checking out...' : 'Check Out Book'}
+                  </Button>
+                )}
+
+                {isAuthenticated && isLibrarian && (
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      startIcon={<Edit />}
+                      onClick={handleEditBook}
+                    >
+                      Edit Book
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<Delete />}
+                      onClick={handleDeleteBook}
+                    >
+                      Delete Book
+                    </Button>
+                  </Box>
+                )}
+              </Box>
+            </Stack>
+          </Grid>
         </Grid>
-      </Grid>
-
-      <Divider sx={{ my: 4 }} />
+      </Paper>
 
       {/* Reviews Section */}
-      <Typography variant="h5" gutterBottom>
-        Customer Reviews
-      </Typography>
+      <Paper elevation={2} sx={{ p: { xs: 2, md: 3 } }}>
+        <Typography variant="h5" gutterBottom fontWeight="medium">
+          Customer Reviews
+        </Typography>
 
-      {isAuthenticated && isCustomer && (
-        <Box sx={{ mb: 4 }}>
-          <ReviewForm bookId={book.id} />
-        </Box>
-      )}
+        {isAuthenticated && isCustomer && (
+          <Box sx={{ mb: 4 }}>
+            <ReviewForm bookId={book.id} />
+          </Box>
+        )}
 
-      <ReviewList bookId={book.id} />
-    </Paper>
+        <ReviewList bookId={book.id} />
+      </Paper>
+    </Box>
   );
 };
 

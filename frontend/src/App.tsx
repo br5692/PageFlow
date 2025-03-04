@@ -15,6 +15,11 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import BooksPage from './pages/BooksPage';
 import BookDetailsPage from './pages/BookDetailsPage';
+import CheckoutsPage from './pages/CheckoutsPage';
+// import AdminBooksPage from './pages/AdminBooksPage';
+// import AdminCheckoutsPage from './pages/AdminCheckoutsPage';
+// import AddBookPage from './pages/AddBookPage';
+// import EditBookPage from './pages/EditBookPage';
 
 // Components
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -39,6 +44,20 @@ const App: React.FC = () => {
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/books" element={<BooksPage />} />
                 <Route path="/books/:id" element={<BookDetailsPage />} />
+
+                {/* Protected Routes - Any authenticated user */}
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/checkouts" element={<CheckoutsPage />} />
+                </Route>
+
+                {/* Protected Routes - Librarian only */}
+                <Route element={<ProtectedRoute requiredRole="Librarian" />}>
+                  {/* <Route path="/admin/books" element={<AdminBooksPage />} />
+                  <Route path="/admin/books/add" element={<AddBookPage />} />
+                  <Route path="/admin/books/edit/:id" element={<EditBookPage />} />
+                  <Route path="/admin/checkouts" element={<AdminCheckoutsPage />} /> */}
+                </Route>
+
                 {/* Not Found */}
                 <Route path="/404" element={<NotFoundPage />} />
                 <Route path="*" element={<Navigate to="/404" replace />} />
