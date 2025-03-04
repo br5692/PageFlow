@@ -85,6 +85,25 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReactApp", builder =>
+    {
+        builder
+            .WithOrigins(
+                "http://localhost:3000",   // React default port
+                "https://localhost:3000",
+                "http://localhost:5096",   // Backend HTTP port
+                "https://localhost:7067",   // Backend HTTPS port
+                "http://localhost:44314",  // API port (http)
+                "https://localhost:44314"  // API port (https)
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
 builder.Services.AddAuthorization();
 
 // Register services
@@ -104,13 +123,17 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+
+    app.UseHttpsRedirection();
 }
 
 app.UseHttpsRedirection();
 app.UseRouting();
+app.UseCors("AllowReactApp");
 
 app.UseAuthentication();
 app.UseAuthorization();
+
 
 app.MapControllers();
 

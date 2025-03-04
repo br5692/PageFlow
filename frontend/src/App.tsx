@@ -1,26 +1,47 @@
 import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import theme from './theme';
 
-function App() {
+// Layout
+import Layout from './components/layout/Layout';
+
+// Pages
+import HomePage from './pages/HomePage';
+import NotFoundPage from './pages/NotFoundPage';
+import UnauthorizedPage from './pages/UnauthorizedPage';
+
+// Components
+import ProtectedRoute from './components/common/ProtectedRoute';
+
+// Context Providers
+import { AuthProvider } from './context/AuthContext';
+import { AlertProvider } from './context/AlertContext';
+
+const App: React.FC = () => {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <AlertProvider>
+        <AuthProvider>
+          <Router>
+            <Layout>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<HomePage />} />
+                <Route path="/unauthorized" element={<UnauthorizedPage />} />
+
+                {/* Not Found */}
+                <Route path="/404" element={<NotFoundPage />} />
+                <Route path="*" element={<Navigate to="/404" replace />} />
+              </Routes>
+            </Layout>
+          </Router>
+        </AuthProvider>
+      </AlertProvider>
+    </ThemeProvider>
   );
-}
+};
 
 export default App;
