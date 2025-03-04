@@ -39,9 +39,10 @@ import { useNavigate } from 'react-router-dom';
 
 interface CheckoutListProps {
   admin?: boolean;
+  filter?: 'all' | 'due-soon' | 'overdue';
 }
 
-const CheckoutList: React.FC<CheckoutListProps> = ({ admin = false }) => {
+const CheckoutList: React.FC<CheckoutListProps> = ({ admin = false, filter = 'all'}) => {
   const [checkouts, setCheckouts] = useState<CheckoutDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [processingReturn, setProcessingReturn] = useState<number | null>(null);
@@ -73,7 +74,7 @@ const CheckoutList: React.FC<CheckoutListProps> = ({ admin = false }) => {
     };
 
     fetchCheckouts();
-  }, [admin, isLibrarian, showAlert]);
+  }, [admin, isLibrarian, showAlert, filter]);
 
   const handleReturn = async (checkoutId: number) => {
     setProcessingReturn(checkoutId);

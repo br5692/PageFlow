@@ -16,10 +16,10 @@ import RegisterPage from './pages/RegisterPage';
 import BooksPage from './pages/BooksPage';
 import BookDetailsPage from './pages/BookDetailsPage';
 import CheckoutsPage from './pages/CheckoutsPage';
-// import AdminBooksPage from './pages/AdminBooksPage';
-// import AdminCheckoutsPage from './pages/AdminCheckoutsPage';
-// import AddBookPage from './pages/AddBookPage';
-// import EditBookPage from './pages/EditBookPage';
+import AdminBooksPage from './pages/AdminBooksPage';
+import AdminCheckoutsPage from './pages/AdminCheckoutsPage';
+import AddBookPage from './pages/AddBookPage';
+import EditBookPage from './pages/EditBookPage';
 
 // Components
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -52,10 +52,10 @@ const App: React.FC = () => {
 
                 {/* Protected Routes - Librarian only */}
                 <Route element={<ProtectedRoute requiredRole="Librarian" />}>
-                  {/* <Route path="/admin/books" element={<AdminBooksPage />} />
+                  <Route path="/admin/books" element={<AdminBooksPage />} />
                   <Route path="/admin/books/add" element={<AddBookPage />} />
                   <Route path="/admin/books/edit/:id" element={<EditBookPage />} />
-                  <Route path="/admin/checkouts" element={<AdminCheckoutsPage />} /> */}
+                  <Route path="/admin/checkouts" element={<AdminCheckoutsPage />} />
                 </Route>
 
                 {/* Not Found */}
