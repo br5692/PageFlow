@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -10,6 +10,7 @@ import {
   Paper,
   InputAdornment,
   IconButton,
+  Alert,
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useFormik } from 'formik';
@@ -18,31 +19,74 @@ import { useAuth } from '../../context/AuthContext';
 
 const LoginForm: React.FC = () => {
   const navigate = useNavigate();
-  const { login, loading } = useAuth();
+  const location = useLocation();
+  const { login, loading, error: authError } = useAuth();
+
   const [showPassword, setShowPassword] = useState(false);
 
+  // We'll track a local error if we need to override or show it in this component
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  // On mount, check for error param in URL or fallback to AuthContext error
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const errorParam = searchParams.get('error');
+
+    // If there's an error in the URL, use it
+    if (errorParam) {
+      setLoginError(decodeURIComponent(errorParam));
+      // Remove the error param from the URL so it doesn't stay forever
+      navigate('/login', { replace: true });
+    }
+    // Otherwise, if the AuthContext has an error, use that
+    else if (authError) {
+      setLoginError(authError);
+    }
+  }, [authError, location, navigate]);
+
+  // Toggle password visibility for the password field
   const handleTogglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
+  // Formik configuration
   const formik = useFormik({
     initialValues: {
       email: '',
       password: '',
     },
     validationSchema: Yup.object({
+      // Email format is validated here
       email: Yup.string().email('Invalid email address').required('Required'),
       password: Yup.string().required('Required'),
     }),
-    onSubmit: async (values) => {
+    onSubmit: async (values, { setSubmitting }) => {
+      setLoginError(null);
       try {
         await login(values);
+        // On success, navigate away
         navigate('/');
-      } catch (error) {
-        // Error is already handled by the auth context
+      } catch (err: any) {
+        console.error('Login failed:', err);
+        // The AuthContext sets sessionStorage and local state.
+        // Here, just reflect that error in the local UI:
+        const fallbackMessage = 'Invalid email or password';
+        const errorMessage = err.response?.data?.message || fallbackMessage;
+        setLoginError(errorMessage);
+
+        // Mark form as not submitting so user can try again
+        setSubmitting(false);
       }
     },
   });
+
+  // As soon as user types again, we can clear the local error
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (loginError) {
+      setLoginError(null);
+    }
+    formik.handleChange(e);
+  };
 
   return (
     <Paper elevation={3} sx={{ p: 4, maxWidth: 500, mx: 'auto' }}>
@@ -56,7 +100,26 @@ const LoginForm: React.FC = () => {
         <Typography component="h1" variant="h5">
           Login
         </Typography>
-        <Box component="form" onSubmit={formik.handleSubmit} noValidate sx={{ mt: 1, width: '100%' }}>
+
+        <Box
+          component="form"
+          // Prevent default to avoid real HTML submission
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!formik.isSubmitting) {
+              formik.handleSubmit(e);
+            }
+          }}
+          noValidate
+          sx={{ mt: 1, width: '100%' }}
+        >
+          {/* If we have an error, show it */}
+          {loginError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {loginError}
+            </Alert>
+          )}
+
           <TextField
             margin="normal"
             required
@@ -67,11 +130,12 @@ const LoginForm: React.FC = () => {
             autoComplete="email"
             autoFocus
             value={formik.values.email}
-            onChange={formik.handleChange}
+            onChange={handleInputChange}
             onBlur={formik.handleBlur}
             error={formik.touched.email && Boolean(formik.errors.email)}
             helperText={formik.touched.email && formik.errors.email}
           />
+
           <TextField
             margin="normal"
             required
@@ -82,7 +146,7 @@ const LoginForm: React.FC = () => {
             id="password"
             autoComplete="current-password"
             value={formik.values.password}
-            onChange={formik.handleChange}
+            onChange={handleInputChange}
             onBlur={formik.handleBlur}
             error={formik.touched.password && Boolean(formik.errors.password)}
             helperText={formik.touched.password && formik.errors.password}
@@ -93,6 +157,7 @@ const LoginForm: React.FC = () => {
                     aria-label="toggle password visibility"
                     onClick={handleTogglePasswordVisibility}
                     edge="end"
+                    type="button"
                   >
                     {showPassword ? <VisibilityOff /> : <Visibility />}
                   </IconButton>
@@ -100,18 +165,26 @@ const LoginForm: React.FC = () => {
               ),
             }}
           />
+
           <Button
             type="submit"
             fullWidth
             variant="contained"
             sx={{ mt: 3, mb: 2 }}
-            disabled={loading}
+            disabled={formik.isSubmitting || loading}
           >
             {loading ? 'Logging in...' : 'Login'}
           </Button>
+
           <Grid container justifyContent="flex-end">
             <Grid item>
-              <Link variant="body2" onClick={() => navigate('/register')} sx={{ cursor: 'pointer' }}>
+              <Link
+                variant="body2"
+                component="button"
+                type="button"
+                onClick={() => navigate('/register')}
+                sx={{ cursor: 'pointer' }}
+              >
                 {"Don't have an account? Register"}
               </Link>
             </Grid>

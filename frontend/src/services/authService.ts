@@ -2,9 +2,19 @@ import api from './api';
 import { LoginDto, RegisterDto, AuthResponseDto, User } from '../types/auth.types';
 
 export const authService = {
-  login: async (credentials: LoginDto): Promise<AuthResponseDto> => {
-    const response = await api.post<AuthResponseDto>('/Auth/login', credentials);
-    return response.data;
+  // login: async (credentials: LoginDto): Promise<AuthResponseDto> => {
+  //   const response = await api.post<AuthResponseDto>('/Auth/login', credentials);
+  //   return response.data;
+  // },
+
+  login: async (credentials: LoginDto): Promise<any> => {
+    try {
+      const response = await api.post<AuthResponseDto>('/Auth/login', credentials);
+      return response.data;
+    } catch (error) {
+      console.error('Auth service login error:', error);
+      throw error; // Make sure to re-throw the error
+    }
   },
   
   register: async (userData: RegisterDto): Promise<void> => {

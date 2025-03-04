@@ -7,11 +7,11 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLibrarian: boolean;
   isCustomer: boolean;
-  login: (credentials: LoginDto) => Promise<void>;
+  login: (credentials: LoginDto) => Promise<any>;
   register: (userData: RegisterDto) => Promise<void>;
   logout: () => void;
   loading: boolean;
-  error: string | null;
+  error: string | null; // Exposed for convenience
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,21 +28,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(storedUser);
     }
     setLoading(false);
+
+    // If there's an error from a previous login attempt stored in sessionStorage, pull it in
+    const storedError = sessionStorage.getItem('loginError');
+    if (storedError) {
+      setError(storedError);
+    }
   }, []);
 
   const login = async (credentials: LoginDto) => {
     try {
       setLoading(true);
       setError(null);
+      // Remove any existing stored error
+      sessionStorage.removeItem('loginError');
+
+      console.log('Attempting login with:', credentials.email);
+
       const response = await authService.login(credentials);
+      console.log('Login response received');
+
+      // Store new auth data
       authService.storeAuthData(response);
       setUser({
         id: response.userId,
         name: response.userName,
-        role: response.role
+        role: response.role,
       });
+
+      return response;
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to login');
+      console.error('Login error in AuthContext:', err);
+
+      // Use response message or fallback
+      const errorMessage =
+        err.response?.data?.message || 'Invalid email or password';
+
+      // Store the error in sessionStorage so it persists on refresh
+      sessionStorage.setItem('loginError', errorMessage);
+
+      setError(errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -65,6 +90,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = () => {
     authService.logout();
     setUser(null);
+
+    // Clear any stored error
+    sessionStorage.removeItem('loginError');
+    setError(null);
   };
 
   const value = {
@@ -76,7 +105,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     register,
     logout,
     loading,
-    error
+    error,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
