@@ -4,7 +4,7 @@ public interface IBookService
 {
     Task<IEnumerable<BookDto>> GetAllBooksAsync(string? sortBy = null, bool ascending = true);
     Task<BookDto?> GetBookByIdAsync(int id);
-    Task<IEnumerable<BookDto>> GetFeaturedBooksAsync(int count);
+    Task<IEnumerable<BookDto>> GetFeaturedBooksAsync(int count, decimal minRating = 0, bool availableOnly = false); 
     Task<BookDto> CreateBookAsync(BookCreateDto bookDto);
     Task<BookDto?> UpdateBookAsync(BookUpdateDto bookDto);
     Task<bool> DeleteBookAsync(int id);

@@ -17,10 +17,6 @@ import {
   InputAdornment,
   Skeleton,
   Alert,
-  Stack,
-  Card,
-  CardContent,
-  useMediaQuery,
   useTheme
 } from '@mui/material';
 import { 
@@ -29,10 +25,8 @@ import {
   Delete, 
   Search, 
   Visibility, 
-  LibraryBooks,
-  FilterList,
   Clear,
-  Book as BookIcon
+  FilterList 
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { BookDto } from '../types/book.types';
@@ -44,7 +38,6 @@ const AdminBooksPage: React.FC = () => {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
   const [books, setBooks] = useState<BookDto[]>([]);
   const [filteredBooks, setFilteredBooks] = useState<BookDto[]>([]);
@@ -109,7 +102,6 @@ const AdminBooksPage: React.FC = () => {
         setFilteredBooks(filteredBooks.filter(book => book.id !== id));
         showAlert('success', 'Book deleted successfully');
       } catch (error: any) {
-        console.error('Failed to delete book:', error);
         showAlert('error', error.response?.data?.message || 'Failed to delete book');
       } finally {
         setDeletingBookId(null);
@@ -127,13 +119,13 @@ const AdminBooksPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Box>
+      <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Skeleton variant="text" width="30%" height={40} />
           <Skeleton variant="rectangular" width={120} height={36} />
         </Box>
         <Skeleton variant="rectangular" height={52} sx={{ mb: 2 }} />
-        <Paper>
+        <Paper sx={{ bgcolor: 'background.paper' }}>
           <Skeleton variant="rectangular" height={400} />
         </Paper>
       </Box>
@@ -142,8 +134,23 @@ const AdminBooksPage: React.FC = () => {
 
   if (error) {
     return (
-      <Box>
-        <PageTitle title="Manage Books" subtitle="Add, edit, or remove books from the library" />
+      <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
+        <Typography 
+          variant="h4" 
+          component="h1" 
+          fontWeight="bold" 
+          color="text.primary" 
+          gutterBottom
+        >
+          Manage Books
+        </Typography>
+        <Typography 
+          variant="subtitle1" 
+          color="text.secondary" 
+          sx={{ mb: 4 }}
+        >
+          Add, edit, or remove books from the library
+        </Typography>
         <Alert 
           severity="error" 
           sx={{ mb: 3 }}
@@ -163,142 +170,39 @@ const AdminBooksPage: React.FC = () => {
     );
   }
 
-  // Mobile view - card-based layout
-  if (isMobile) {
-    return (
-      <Box>
-        <Box sx={{ mb: 3 }}>
-          <PageTitle title="Manage Books" subtitle="Add, edit, or remove books from the library" />
-        </Box>
-
-        <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-          <TextField
-            fullWidth
-            value={searchTerm}
-            onChange={handleSearchChange}
-            placeholder="Search books..."
-            variant="outlined"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search />
-                </InputAdornment>
-              ),
-              endAdornment: searchTerm && (
-                <InputAdornment position="end">
-                  <IconButton size="small" onClick={clearSearch}>
-                    <Clear />
-                  </IconButton>
-                </InputAdornment>
-              )
-            }}
-            size="small"
-          />
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={handleAddBook}
-          >
-            Add
-          </Button>
-        </Stack>
-
-        {filteredBooks.length === 0 ? (
-          <Card sx={{ textAlign: 'center', p: 2 }}>
-            <CardContent>
-              <BookIcon sx={{ fontSize: 60, color: 'text.secondary', opacity: 0.3, mb: 2 }} />
-              <Typography variant="h6" gutterBottom>
-                No books found
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {searchTerm 
-                  ? "No books match your search criteria" 
-                  : "There are no books in the library yet"}
-              </Typography>
-              <Button 
-                variant="contained" 
-                sx={{ mt: 2 }}
-                startIcon={<Add />}
-                onClick={handleAddBook}
-              >
-                Add Your First Book
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <Stack spacing={2}>
-            {filteredBooks.map((book) => (
-              <Card key={book.id} variant="outlined">
-                <CardContent>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="h6" noWrap sx={{ maxWidth: '70%' }}>
-                      {book.title}
-                    </Typography>
-                    <Chip
-                      label={book.isAvailable ? 'Available' : 'Checked Out'}
-                      color={book.isAvailable ? 'success' : 'error'}
-                      size="small"
-                    />
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    by {book.author}
-                  </Typography>
-                  {book.category && (
-                    <Typography variant="body2" color="text.secondary">
-                      Category: {book.category}
-                    </Typography>
-                  )}
-                  <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-                    <Button
-                      size="small"
-                      startIcon={<Visibility />}
-                      onClick={() => handleViewBook(book.id)}
-                    >
-                      View
-                    </Button>
-                    <Button
-                      size="small"
-                      startIcon={<Edit />}
-                      onClick={() => handleEditBook(book.id)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      size="small"
-                      color="error"
-                      startIcon={<Delete />}
-                      onClick={() => handleDeleteBook(book.id)}
-                      disabled={deletingBookId === book.id}
-                    >
-                      {deletingBookId === book.id ? 'Deleting...' : 'Delete'}
-                    </Button>
-                  </Stack>
-                </CardContent>
-              </Card>
-            ))}
-          </Stack>
-        )}
-      </Box>
-    );
-  }
-
-  // Desktop view - table-based layout
   return (
-    <Box>
+    <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <PageTitle title="Manage Books" subtitle="Add, edit, or remove books from the library" />
+        <Box>
+          <Typography 
+            variant="h4" 
+            component="h1" 
+            fontWeight="bold" 
+            color="text.primary" 
+            gutterBottom
+          >
+            Manage Books
+          </Typography>
+          <Typography 
+            variant="subtitle1" 
+            color="text.secondary" 
+          >
+            Add, edit, or remove books from the library
+          </Typography>
+        </Box>
         <Button
           variant="contained"
           color="primary"
           startIcon={<Add />}
           onClick={handleAddBook}
+          sx={{ height: 'fit-content' }}
         >
           Add New Book
         </Button>
       </Box>
 
-      <Paper sx={{ mb: 3 }}>
-        <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
+      <Paper sx={{ p: 2, mb: 3, bgcolor: 'background.paper' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <FilterList sx={{ mr: 1, color: 'text.secondary' }} />
           <TextField
             variant="outlined"
@@ -321,14 +225,18 @@ const AdminBooksPage: React.FC = () => {
                 </InputAdornment>
               )
             }}
+            sx={{ 
+              '& .MuiOutlinedInput-root': { 
+                bgcolor: 'background.default'
+              } 
+            }}
           />
         </Box>
       </Paper>
 
       {filteredBooks.length === 0 ? (
-        <Paper sx={{ p: 5, textAlign: 'center' }}>
-          <LibraryBooks sx={{ fontSize: 80, color: 'text.secondary', opacity: 0.3 }} />
-          <Typography variant="h5" sx={{ mt: 2, mb: 1 }}>
+        <Paper sx={{ p: 5, textAlign: 'center', bgcolor: 'background.paper' }}>
+          <Typography variant="h5" sx={{ mt: 2, mb: 1, color: 'text.primary' }}>
             No books found
           </Typography>
           <Typography variant="body1" color="text.secondary">
@@ -357,36 +265,37 @@ const AdminBooksPage: React.FC = () => {
           )}
         </Paper>
       ) : (
-        <TableContainer component={Paper}>
+        <TableContainer component={Paper} sx={{ bgcolor: 'background.paper' }}>
           <Table>
-            <TableHead>
+            <TableHead sx={{ bgcolor: 'background.default' }}>
               <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>Title</TableCell>
-                <TableCell>Author</TableCell>
-                <TableCell>Category</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell sx={{ color: 'text.secondary' }}>ID</TableCell>
+                <TableCell sx={{ color: 'text.secondary' }}>Title</TableCell>
+                <TableCell sx={{ color: 'text.secondary' }}>Author</TableCell>
+                <TableCell sx={{ color: 'text.secondary' }}>Category</TableCell>
+                <TableCell sx={{ color: 'text.secondary' }}>Status</TableCell>
+                <TableCell align="right" sx={{ color: 'text.secondary' }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {filteredBooks.map((book) => (
                 <TableRow key={book.id} hover>
-                  <TableCell>{book.id}</TableCell>
+                  <TableCell sx={{ color: 'text.primary' }}>{book.id}</TableCell>
                   <TableCell>
                     <Typography 
                       sx={{ 
                         fontWeight: 'medium',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
-                        maxWidth: '300px'
+                        maxWidth: '300px',
+                        color: 'text.primary'
                       }}
                     >
                       {book.title}
                     </Typography>
                   </TableCell>
-                  <TableCell>{book.author}</TableCell>
-                  <TableCell>{book.category || '—'}</TableCell>
+                  <TableCell sx={{ color: 'text.primary' }}>{book.author}</TableCell>
+                  <TableCell sx={{ color: 'text.primary' }}>{book.category || '—'}</TableCell>
                   <TableCell>
                     <Chip
                       label={book.isAvailable ? 'Available' : 'Checked Out'}

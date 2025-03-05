@@ -1,4 +1,3 @@
-// HomePage.tsx
 import React from 'react';
 import { Box, Container, Typography, Divider } from '@mui/material';
 import HomeHero from '../components/home/HomeHero';
@@ -50,13 +49,14 @@ const HomePage: React.FC = () => {
         
         <Divider sx={{ my: 6, borderColor: 'rgba(255,255,255,0.08)' }} />
         
+        {/* Category Showcase */}
         {/* <FeaturedCategories /> */}
-                
+        
         {isAuthenticated && !isLibrarian && (
           <>
             <Divider sx={{ my: 6, borderColor: 'rgba(255,255,255,0.08)' }} />
             
-            {/* Recently Added Books - Shows only to authenticated customers */}
+            {/* New Arrivals Section */}
             <Box sx={{ mb: 6 }}>
               <Box sx={{ mb: 5, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <Typography 
@@ -91,43 +91,7 @@ const HomePage: React.FC = () => {
           </>
         )}
         
-        {isLibrarian && (
-          <>
-            <Divider sx={{ my: 6, borderColor: 'rgba(255,255,255,0.08)' }} />
-            
-            {/* Quick Access for Librarians */}
-            <Box sx={{ mb: 6 }}>
-              <Box sx={{ mb: 5, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <Typography 
-                  variant="h6" 
-                  component="div" 
-                  color="primary"
-                  fontWeight="500"
-                  sx={{ mb: 1 }}
-                >
-                  ADMINISTRATIVE TOOLS
-                </Typography>
-                <Typography 
-                  variant="h3" 
-                  component="h2" 
-                  fontWeight="bold"
-                  align="center"
-                  sx={{ mb: 1, letterSpacing: '-0.02em' }}
-                >
-                  LIBRARIAN DASHBOARD
-                </Typography>
-                <Box 
-                  sx={{ 
-                    width: 60, 
-                    height: 4, 
-                    backgroundColor: 'primary.main',
-                    mt: 2
-                  }} 
-                />
-              </Box>
-            </Box>
-          </>
-        )}
+        {/* Removed Librarian Dashboard section as requested */}
       </Container>
     </Box>
   );

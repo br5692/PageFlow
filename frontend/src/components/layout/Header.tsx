@@ -9,13 +9,15 @@ import {
   Menu,
   MenuItem,
   Container,
+  useTheme
 } from '@mui/material';
-import { AccountCircle, Book, ExitToApp, Menu as MenuIcon } from '@mui/icons-material';
+import { AccountCircle, MenuBook as BookIcon, ExitToApp, Menu as MenuIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
   const { isAuthenticated, user, logout, isLibrarian } = useAuth();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [mobileAnchorEl, setMobileAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -43,43 +45,43 @@ const Header: React.FC = () => {
   };
 
   return (
-    <AppBar position="static">
+    <AppBar position="static" sx={{ bgcolor: 'background.paper', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
       <Container maxWidth="lg">
         <Toolbar>
           <Typography
             variant="h6"
             component="div"
-            sx={{ flexGrow: 1, cursor: 'pointer' }}
+            sx={{ flexGrow: 1, cursor: 'pointer', color: 'text.primary' }}
             onClick={() => navigate('/')}
           >
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Book sx={{ mr: 1 }} />
+              <BookIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
               Library Management System
             </Box>
           </Typography>
 
           {/* Desktop Menu */}
           <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
-            <Button color="inherit" onClick={() => navigate('/books')}>
-              Browse Books
-            </Button>
-
             {isAuthenticated ? (
               <>
-                {isLibrarian && (
+                <Button color="inherit" onClick={() => navigate('/books')} sx={{ color: 'text.primary' }}>
+                  Browse Books
+                </Button>
+
+                {isLibrarian ? (
                   <>
-                    <Button color="inherit" onClick={() => navigate('/admin/books')}>
+                    <Button color="inherit" onClick={() => navigate('/admin/books')} sx={{ color: 'text.primary' }}>
                       Manage Books
                     </Button>
-                    <Button color="inherit" onClick={() => navigate('/admin/checkouts')}>
+                    <Button color="inherit" onClick={() => navigate('/admin/checkouts')} sx={{ color: 'text.primary' }}>
                       View Checkouts
                     </Button>
                   </>
+                ) : (
+                  <Button color="inherit" onClick={() => navigate('/checkouts')} sx={{ color: 'text.primary' }}>
+                    My Checkouts
+                  </Button>
                 )}
-
-                <Button color="inherit" onClick={() => navigate('/checkouts')}>
-                  My Checkouts
-                </Button>
 
                 <IconButton
                   size="large"
@@ -89,6 +91,7 @@ const Header: React.FC = () => {
                   aria-haspopup="true"
                   onClick={handleMenu}
                   color="inherit"
+                  sx={{ color: 'text.primary' }}
                 >
                   <AccountCircle />
                 </IconButton>
@@ -118,10 +121,11 @@ const Header: React.FC = () => {
               </>
             ) : (
               <>
-                <Button color="inherit" onClick={() => navigate('/login')}>
+                {/* Login/Register buttons for non-authenticated users */}
+                <Button color="inherit" onClick={() => navigate('/login')} sx={{ color: 'text.primary' }}>
                   Login
                 </Button>
-                <Button color="inherit" onClick={() => navigate('/register')}>
+                <Button color="inherit" onClick={() => navigate('/register')} sx={{ color: 'text.primary' }}>
                   Register
                 </Button>
               </>
@@ -134,7 +138,7 @@ const Header: React.FC = () => {
             edge="start"
             color="inherit"
             aria-label="menu"
-            sx={{ display: { xs: 'flex', md: 'none' } }}
+            sx={{ display: { xs: 'flex', md: 'none' }, color: 'text.primary' }}
             onClick={handleMobileMenu}
           >
             <MenuIcon />
@@ -148,13 +152,13 @@ const Header: React.FC = () => {
             open={Boolean(mobileAnchorEl)}
             onClose={handleMobileClose}
           >
-            <MenuItem onClick={() => { navigate('/books'); handleMobileClose(); }}>
-              Browse Books
-            </MenuItem>
-
             {isAuthenticated ? (
               <>
-                {isLibrarian && (
+                <MenuItem onClick={() => { navigate('/books'); handleMobileClose(); }}>
+                  Browse Books
+                </MenuItem>
+
+                {isLibrarian ? (
                   <>
                     <MenuItem onClick={() => { navigate('/admin/books'); handleMobileClose(); }}>
                       Manage Books
@@ -163,10 +167,11 @@ const Header: React.FC = () => {
                       View Checkouts
                     </MenuItem>
                   </>
+                ) : (
+                  <MenuItem onClick={() => { navigate('/checkouts'); handleMobileClose(); }}>
+                    My Checkouts
+                  </MenuItem>
                 )}
-                <MenuItem onClick={() => { navigate('/checkouts'); handleMobileClose(); }}>
-                  My Checkouts
-                </MenuItem>
                 <MenuItem onClick={handleLogout}>
                   Logout ({user?.name})
                 </MenuItem>

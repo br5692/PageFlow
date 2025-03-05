@@ -13,6 +13,7 @@ import {
   Checkbox,
   InputAdornment,
   IconButton,
+  useTheme
 } from '@mui/material';
 import { Search, Clear } from '@mui/icons-material';
 import debounce from 'lodash/debounce';
@@ -45,13 +46,12 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
   const [categories, setCategories] = useState<string[]>([]);
   const [authors, setAuthors] = useState<string[]>([]);
   
-  // Add state to track if search was active
   const [searchWasActive, setSearchWasActive] = useState(false);
   
   const { showAlert } = useAlert();
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const theme = useTheme();
 
-  // First effect - unchanged
   useEffect(() => {
     const fetchAllOptions = async () => {
       try {
@@ -71,11 +71,9 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
     }
   }, [featured]);
 
-  // Second effect - modified to track loading state changes
   useEffect(() => {
     const fetchBooks = async () => {
       setLoading(true);
-      // Set flag that we'll need to restore focus when loading completes
       if (searchInputRef.current === document.activeElement) {
         setSearchWasActive(true);
       }
@@ -85,6 +83,10 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
         
         if (featured) {
           fetchedBooks = await bookService.getFeaturedBooks(featuredCount);
+        // Filter to only show books with 4+ stars and available status
+        //   fetchedBooks = fetchedBooks.filter(book => 
+        //     book.averageRating >= 4.0 && book.isAvailable
+        //   );
         } else if (searchParams.query || searchParams.category || searchParams.author || searchParams.isAvailable !== undefined) {
           fetchedBooks = await bookService.searchBooks(searchParams);
         } else {
@@ -110,7 +112,6 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
     fetchBooks();
   }, [featured, featuredCount, searchParams, showAlert]);
 
-  // Effect to restore focus after loading completes
   useEffect(() => {
     if (!loading && searchWasActive && searchInputRef.current) {
       searchInputRef.current.focus();
@@ -118,7 +119,6 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
     }
   }, [loading, searchWasActive]);
 
-  // Debounced search function
   const debouncedSearch = useCallback(
     debounce((value: string) => {
       setSearchParams(prev => ({ ...prev, query: value }));
@@ -135,7 +135,6 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
   const handleClearSearch = () => {
     setSearchText('');
     setSearchParams(prev => ({ ...prev, query: '' }));
-    // Focus the input after clearing
     if (searchInputRef.current) {
       searchInputRef.current.focus();
     }
@@ -196,11 +195,16 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
                     </InputAdornment>
                   ) : null,
                 }}
+                sx={{ 
+                  '& .MuiOutlinedInput-root': { 
+                    bgcolor: 'background.paper'
+                  }
+                }}
               />
             </Grid>
             
             <Grid item xs={12} sm={6} md={2}>
-              <FormControl fullWidth>
+              <FormControl fullWidth sx={{ bgcolor: 'background.paper' }}>
                 <InputLabel id="category-label">Category</InputLabel>
                 <Select
                   labelId="category-label"
@@ -219,7 +223,7 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
             </Grid>
             
             <Grid item xs={12} sm={6} md={2}>
-              <FormControl fullWidth>
+              <FormControl fullWidth sx={{ bgcolor: 'background.paper' }}>
                 <InputLabel id="author-label">Author</InputLabel>
                 <Select
                   labelId="author-label"
@@ -238,7 +242,7 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
             </Grid>
             
             <Grid item xs={12} sm={6} md={2}>
-              <FormControl fullWidth>
+              <FormControl fullWidth sx={{ bgcolor: 'background.paper' }}>
                 <InputLabel id="sort-label">Sort By</InputLabel>
                 <Select
                   labelId="sort-label"
@@ -280,15 +284,17 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
       )}
 
       {books.length === 0 ? (
-        <Typography variant="h6" align="center" sx={{ my: 4 }}>
-          No books found. Try adjusting your search criteria.
+        <Typography variant="h6" align="center" sx={{ my: 4, color: 'text.primary' }}>
+          {featured 
+            ? "No featured books available at this time."
+            : "No books found. Try adjusting your search criteria."}
         </Typography>
       ) : (
         <Grid 
           container 
           spacing={3}
         >
-          {books.map((book) => (
+          {books.map((book, index) => (
             <Grid 
               item 
               key={book.id} 
@@ -301,6 +307,7 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
               <BookCard 
                 book={book} 
                 featured={featured}
+                index={index}
               />
             </Grid>
           ))}

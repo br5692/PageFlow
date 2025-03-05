@@ -45,11 +45,11 @@ namespace backend.Data
                         .RuleFor(b => b.CoverImage, f => f.Image.PicsumUrl())
                         .RuleFor(b => b.IsAvailable, true); // Explicitly set IsAvailable to true
 
-                    var fakeBooks = faker.Generate(50); // Generate 50 fake books
+                    var fakeBooks = faker.Generate(1000); // Generate 1000 fake books
                     _dbContext.Books.AddRange(fakeBooks);
                     await _dbContext.SaveChangesAsync();
 
-                    Console.WriteLine("Successfully seeded database with 50 Bogus-generated books.");
+                    Console.WriteLine("Successfully seeded database with 1000 Bogus-generated books.");
                 }
                 else
                 {
@@ -78,7 +78,7 @@ namespace backend.Data
         }
 
         /// <summary>
-        /// Seeds reviews for books from existing users
+        /// Seeds reviews for 80% of books from existing users with ratings from 2-5
         /// </summary>
         private async Task SeedReviewsAsync()
         {
@@ -92,21 +92,25 @@ namespace backend.Data
                 return;
             }
 
-            Console.WriteLine($"Seeding reviews for {books.Count} books from {users.Count} users...");
+            // Calculate how many books should have reviews (80% of total)
+            int booksWithReviews = (int)(books.Count * 0.8);
+            Console.WriteLine($"Seeding reviews for {booksWithReviews} books (80% of total) from {users.Count} users...");
+
+            // Randomly select 80% of books to have reviews
+            var random = new Random();
+            var booksToReview = books.OrderBy(x => random.Next()).Take(booksWithReviews).ToList();
 
             var reviewFaker = new Faker<Review>()
-                .RuleFor(r => r.Rating, f => f.Random.Int(1, 5))
+                .RuleFor(r => r.Rating, f => f.Random.Int(2, 5)) // Ratings from 2-5
                 .RuleFor(r => r.Comment, f => f.Lorem.Paragraph())
                 .RuleFor(r => r.CreatedAt, f => f.Date.Past(1));
 
-            // Create reviews for each book
-            var random = new Random();
             int totalReviews = 0;
 
-            foreach (var book in books)
+            foreach (var book in booksToReview)
             {
-                // Give each book 0-3 reviews
-                int reviewCount = random.Next(1, 4); // At least 1 review per book for better testing
+                // Give each selected book 1-5 reviews
+                int reviewCount = random.Next(1, 6);
 
                 for (int i = 0; i < reviewCount; i++)
                 {
@@ -128,7 +132,7 @@ namespace backend.Data
             }
 
             await _dbContext.SaveChangesAsync();
-            Console.WriteLine($"Successfully seeded {totalReviews} reviews.");
+            Console.WriteLine($"Successfully seeded {totalReviews} reviews for {booksToReview.Count} books.");
         }
     }
 }

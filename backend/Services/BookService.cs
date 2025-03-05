@@ -92,11 +92,33 @@ public class BookService : IBookService
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<BookDto>> GetFeaturedBooksAsync(int count)
+    public async Task<IEnumerable<BookDto>> GetFeaturedBooksAsync(
+    int count,
+    decimal minRating = 0,
+    bool availableOnly = false)
     {
-        return await _context.Books
+        var query = _context.Books
             .Include(b => b.Reviews)
-            .OrderBy(b => Guid.NewGuid()) // Random order
+            .AsQueryable();
+
+        // Apply filters
+        if (minRating > 0)
+        {
+            // Fix the type mismatch with cast
+            query = query.Where(b => b.Reviews.Any() &&
+                (decimal)b.Reviews.Average(r => r.Rating) >= minRating);
+        }
+
+        if (availableOnly)
+        {
+            query = query.Where(b => b.IsAvailable);
+        }
+
+        // Use deterministic ordering for consistency
+        return await query
+            .OrderByDescending(b => b.Reviews.Count)
+            .ThenByDescending(b => b.Reviews.Any() ?
+                (decimal)b.Reviews.Average(r => r.Rating) : 0)
             .Take(count)
             .Select(b => MapToBookDto(b))
             .ToListAsync();

@@ -44,11 +44,15 @@ namespace backend.Controllers
         }
 
         [HttpGet("featured")]
-        public async Task<ActionResult<IEnumerable<BookDto>>> GetFeaturedBooks([FromQuery] int count = 10)
+        public async Task<ActionResult<IEnumerable<BookDto>>> GetFeaturedBooks(
+            [FromQuery] int count = 10,
+            [FromQuery] decimal minRating = 0,
+            [FromQuery] bool availableOnly = false
+            )
         {
             try
             {
-                var books = await _bookService.GetFeaturedBooksAsync(count);
+                var books = await _bookService.GetFeaturedBooksAsync(count, minRating, availableOnly);
                 return Ok(books);
             }
             catch (Exception ex)

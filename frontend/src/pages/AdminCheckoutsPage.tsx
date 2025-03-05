@@ -1,30 +1,51 @@
 import React, { useState } from 'react';
-import { Box, Typography, Paper, Tabs, Tab } from '@mui/material';
+import { Box, Typography, Paper, Tabs, Tab, useTheme } from '@mui/material';
 import { LibraryBooks, EventNote, EventAvailable } from '@mui/icons-material';
 import CheckoutList from '../components/checkouts/CheckoutList';
-import PageTitle from '../components/common/PageTitle';
 
 const AdminCheckoutsPage: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
+  const theme = useTheme();
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
   return (
-    <Box>
-      <PageTitle 
-        title="Manage Library Checkouts" 
-        subtitle="View active checkouts and process book returns" 
-      />
+    <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
+      <Box sx={{ mb: 3 }}>
+        <Typography 
+          variant="h4" 
+          component="h1" 
+          fontWeight="bold" 
+          color="text.primary" 
+          gutterBottom
+        >
+          Manage Library Checkouts
+        </Typography>
+        <Typography 
+          variant="subtitle1" 
+          color="text.secondary" 
+        >
+          View active checkouts and process book returns
+        </Typography>
+      </Box>
       
-      <Paper sx={{ mb: 3 }}>
+      <Paper sx={{ mb: 3, bgcolor: 'background.paper' }}>
         <Tabs 
           value={tabValue} 
           onChange={handleTabChange}
           aria-label="checkout status tabs"
           textColor="primary"
           indicatorColor="primary"
+          sx={{ 
+            '& .MuiTab-root': {
+              color: 'text.secondary',
+              '&.Mui-selected': {
+                color: theme.palette.primary.main
+              }
+            }
+          }}
         >
           <Tab 
             icon={<LibraryBooks />} 

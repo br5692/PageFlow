@@ -136,7 +136,8 @@ namespace backend.Tests
                 new BookDto { Id = 2, Title = "Featured Book 2", Author = "Author 2" }
             };
 
-            _mockBookService.Setup(x => x.GetFeaturedBooksAsync(5))
+            // Update the setup to match the new signature with default values
+            _mockBookService.Setup(x => x.GetFeaturedBooksAsync(5, 0, false))
                 .ReturnsAsync(books);
 
             var controller = new BooksController(_mockBookService.Object, _mockReviewService.Object, _mockLogger.Object);
