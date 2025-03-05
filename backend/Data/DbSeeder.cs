@@ -17,9 +17,25 @@ namespace backend.Data
         private const double BOOKS_WITH_REVIEWS_PERCENTAGE = 0.6;
         private const int MAX_REVIEWS_PER_BOOK = 15;
 
+        // Dictionary to store key elements from book titles for use in reviews
+        private Dictionary<int, BookTheme> _bookThemes = new Dictionary<int, BookTheme>();
+
         public DbSeeder(LibraryDbContext dbContext)
         {
             _dbContext = dbContext;
+        }
+
+        /// <summary>
+        /// Class to hold the thematic elements of a book
+        /// </summary>
+        private class BookTheme
+        {
+            public string Title { get; set; }
+            public string MainNoun { get; set; }
+            public string Character { get; set; }
+            public string Subject { get; set; }
+            public string Adjective { get; set; }
+            public string Setting { get; set; }
         }
 
         /// <summary>
@@ -72,7 +88,7 @@ namespace backend.Data
 
         /// <summary>
         /// Seeds the database with realistic books using templates for titles and descriptions.
-        /// Ensures all book titles are unique.
+        /// Ensures all book titles are unique and descriptions relate to titles.
         /// </summary>
         private async Task SeedBooksAsync()
         {
@@ -87,12 +103,14 @@ namespace backend.Data
 
                 for (int j = 0; j < batchCount; j++)
                 {
-                    // Generate a unique title
+                    // Generate a unique title and its theme elements
                     string title;
+                    BookTheme theme;
                     int attempts = 0;
+
                     do
                     {
-                        title = GenerateBookTitle();
+                        (title, theme) = GenerateBookTitle();
                         attempts++;
                         // Avoid infinite loops by adding a unique suffix after too many attempts
                         if (attempts > 10)
@@ -108,11 +126,11 @@ namespace backend.Data
                     {
                         Title = title,
                         Author = new Faker().Name.FullName(),
-                        Description = GenerateBookDescription(),
+                        Description = GenerateBookDescription(theme),
                         ISBN = new Faker().Random.Replace("###-##########"),
                         Publisher = new Faker().Company.CompanyName(),
                         PublishedDate = new Faker().Date.Past(20),
-                        Category = SeederConstants.GetRandomItem(SeederConstants.BookSubjects),
+                        Category = theme.Subject ?? SeederConstants.GetRandomItem(SeederConstants.BookSubjects),
                         PageCount = _random.Next(100, 801),
                         CoverImage = GetRandomCoverImage(),
                         IsAvailable = true
@@ -124,6 +142,18 @@ namespace backend.Data
                 _dbContext.Books.AddRange(booksToAdd);
                 await _dbContext.SaveChangesAsync();
 
+                // After saving the batch, store the book themes for each book ID
+                foreach (var book in booksToAdd)
+                {
+                    if (!_bookThemes.ContainsKey(book.Id) && book.Title != null)
+                    {
+                        // Parse the title to extract theme elements
+                        (_, BookTheme theme) = GenerateBookTitleFromExisting(book.Title);
+                        theme.Title = book.Title; // Store the actual title
+                        _bookThemes[book.Id] = theme;
+                    }
+                }
+
                 Console.WriteLine($"Added batch of {batchCount} books. Progress: {i + batchCount}/{TOTAL_BOOKS}");
             }
 
@@ -132,6 +162,7 @@ namespace backend.Data
 
         /// <summary>
         /// Seeds reviews for books with a realistic distribution.
+        /// Reviews reference key elements from the corresponding book's title and description.
         /// </summary>
         private async Task SeedReviewsAsync()
         {
@@ -143,6 +174,17 @@ namespace backend.Data
             {
                 Console.WriteLine("Cannot seed reviews: No books or users found.");
                 return;
+            }
+
+            // Load missing book themes for existing books
+            foreach (var book in books)
+            {
+                if (!_bookThemes.ContainsKey(book.Id) && book.Title != null)
+                {
+                    (_, BookTheme theme) = GenerateBookTitleFromExisting(book.Title);
+                    theme.Title = book.Title;
+                    _bookThemes[book.Id] = theme;
+                }
             }
 
             // Determine how many books should have reviews
@@ -222,13 +264,22 @@ namespace backend.Data
                         else rating = _random.Next(4, 6);
                     }
 
-                    // Create review with text based on the rating
+                    // Get the book's theme for use in the review
+                    BookTheme theme = _bookThemes.ContainsKey(book.Id)
+                        ? _bookThemes[book.Id]
+                        : new BookTheme
+                        {
+                            Title = book.Title,
+                            Subject = book.Category
+                        };
+
+                    // Create review with text based on the rating and book theme
                     var review = new Review
                     {
                         BookId = book.Id,
                         LibraryUserId = userId,
                         Rating = rating,
-                        Comment = GenerateReview(rating),
+                        Comment = GenerateReview(rating, theme),
                         CreatedAt = new Faker().Date.Past(1)
                     };
 
@@ -257,10 +308,10 @@ namespace backend.Data
         }
 
         /// <summary>
-        /// Generates a book title using templates from SeederConstants.
+        /// Generates a book title using templates from SeederConstants and returns the key thematic elements.
         /// Specifically avoids using any templates with numbers.
         /// </summary>
-        private string GenerateBookTitle()
+        private (string Title, BookTheme Theme) GenerateBookTitle()
         {
             // Filter out templates that use numbers
             var validTemplates = SeederConstants.BookTitleTemplates
@@ -279,24 +330,115 @@ namespace backend.Data
 
             string template = SeederConstants.GetRandomItem(validTemplates);
 
-            template = template.Replace("{Adjective}", SeederConstants.GetRandomItem(SeederConstants.Adjectives));
-            template = template.Replace("{Noun}", SeederConstants.GetRandomItem(SeederConstants.Nouns));
-            template = template.Replace("{BookSubject}", SeederConstants.GetRandomItem(SeederConstants.BookSubjects));
-            template = template.Replace("{Character}", SeederConstants.GetRandomItem(SeederConstants.Characters));
-            template = template.Replace("{Setting}", SeederConstants.GetRandomItem(SeederConstants.Settings));
+            // Create a theme object to store key elements
+            var theme = new BookTheme();
 
-            return template;
+            // Generate and store each element
+            theme.Adjective = SeederConstants.GetRandomItem(SeederConstants.Adjectives);
+            theme.MainNoun = SeederConstants.GetRandomItem(SeederConstants.Nouns);
+            theme.Subject = SeederConstants.GetRandomItem(SeederConstants.BookSubjects);
+            theme.Character = SeederConstants.GetRandomItem(SeederConstants.Characters);
+            theme.Setting = SeederConstants.GetRandomItem(SeederConstants.Settings);
+
+            // Apply the elements to the template
+            string title = template
+                .Replace("{Adjective}", theme.Adjective)
+                .Replace("{Noun}", theme.MainNoun)
+                .Replace("{BookSubject}", theme.Subject)
+                .Replace("{Character}", theme.Character)
+                .Replace("{Setting}", theme.Setting);
+
+            return (title, theme);
         }
 
         /// <summary>
-        /// Generates a book description using templates from SeederConstants.
+        /// Attempts to extract theme elements from an existing title
         /// </summary>
-        private string GenerateBookDescription()
+        private (string Title, BookTheme Theme) GenerateBookTitleFromExisting(string existingTitle)
+        {
+            var theme = new BookTheme { Title = existingTitle };
+
+            // Look for potential matches from our word lists
+            foreach (var adjective in SeederConstants.Adjectives)
+            {
+                if (existingTitle.Contains(adjective, StringComparison.OrdinalIgnoreCase))
+                {
+                    theme.Adjective = adjective;
+                    break;
+                }
+            }
+
+            foreach (var noun in SeederConstants.Nouns)
+            {
+                if (existingTitle.Contains(noun, StringComparison.OrdinalIgnoreCase))
+                {
+                    theme.MainNoun = noun;
+                    break;
+                }
+            }
+
+            foreach (var subject in SeederConstants.BookSubjects)
+            {
+                if (existingTitle.Contains(subject, StringComparison.OrdinalIgnoreCase))
+                {
+                    theme.Subject = subject;
+                    break;
+                }
+            }
+
+            foreach (var character in SeederConstants.Characters)
+            {
+                if (existingTitle.Contains(character, StringComparison.OrdinalIgnoreCase))
+                {
+                    theme.Character = character;
+                    break;
+                }
+            }
+
+            foreach (var setting in SeederConstants.Settings)
+            {
+                if (existingTitle.Contains(setting, StringComparison.OrdinalIgnoreCase))
+                {
+                    theme.Setting = setting;
+                    break;
+                }
+            }
+
+            // If we couldn't extract some elements, fill in with random ones
+            theme.Adjective ??= SeederConstants.GetRandomItem(SeederConstants.Adjectives);
+            theme.MainNoun ??= SeederConstants.GetRandomItem(SeederConstants.Nouns);
+            theme.Subject ??= SeederConstants.GetRandomItem(SeederConstants.BookSubjects);
+            theme.Character ??= SeederConstants.GetRandomItem(SeederConstants.Characters);
+            theme.Setting ??= SeederConstants.GetRandomItem(SeederConstants.Settings);
+
+            return (existingTitle, theme);
+        }
+
+        /// <summary>
+        /// Generates a book description that relates to the book's theme.
+        /// </summary>
+        private string GenerateBookDescription(BookTheme theme)
         {
             string template = SeederConstants.GetRandomItem(SeederConstants.BookDescriptionTemplates);
 
-            // Replace placeholders with random words
-            // Use ReplaceFirst to ensure each placeholder gets a different word
+            // First ensure the key themes from the title appear in the description
+            // Replace the first instance of each placeholder with the theme element
+            if (theme.Adjective != null && template.Contains("{Adjective}"))
+                template = ReplaceFirst(template, "{Adjective}", theme.Adjective);
+
+            if (theme.Setting != null && template.Contains("{Setting}"))
+                template = ReplaceFirst(template, "{Setting}", theme.Setting);
+
+            if (theme.Character != null && template.Contains("{Character}"))
+                template = ReplaceFirst(template, "{Character}", theme.Character);
+
+            if (theme.MainNoun != null && template.Contains("{Noun}"))
+                template = ReplaceFirst(template, "{Noun}", theme.MainNoun);
+
+            if (theme.Subject != null && template.Contains("{BookSubject}"))
+                template = ReplaceFirst(template, "{BookSubject}", theme.Subject);
+
+            // Now replace any remaining placeholders with random words
             while (template.Contains("{Adjective}"))
                 template = ReplaceFirst(template, "{Adjective}", SeederConstants.GetRandomItem(SeederConstants.Adjectives));
 
@@ -320,15 +462,29 @@ namespace backend.Data
 
         /// <summary>
         /// Generates a review based on the rating using templates from SeederConstants.
+        /// Incorporates elements from the book's theme to create more relevant reviews.
         /// </summary>
-        private string GenerateReview(int rating)
+        private string GenerateReview(int rating, BookTheme theme)
         {
             // Ensure rating is within valid range (1-5)
             rating = Math.Clamp(rating, 1, 5);
 
             string template = SeederConstants.GetRandomItem(SeederConstants.ReviewTemplatesByRating[rating]);
 
-            // Replace placeholders with random words
+            // First ensure theme elements appear in the review
+            if (theme.Adjective != null && template.Contains("{Adjective}"))
+                template = ReplaceFirst(template, "{Adjective}", theme.Adjective);
+
+            if (theme.Character != null && template.Contains("{Character}"))
+                template = ReplaceFirst(template, "{Character}", theme.Character);
+
+            if (theme.Setting != null && template.Contains("{Setting}"))
+                template = ReplaceFirst(template, "{Setting}", theme.Setting);
+
+            if (theme.Subject != null && template.Contains("{BookSubject}"))
+                template = ReplaceFirst(template, "{BookSubject}", theme.Subject);
+
+            // Now replace any remaining placeholders with random words
             while (template.Contains("{Adjective}"))
                 template = ReplaceFirst(template, "{Adjective}", SeederConstants.GetRandomItem(SeederConstants.Adjectives));
 
@@ -343,6 +499,50 @@ namespace backend.Data
 
             while (template.Contains("{BookSubject}"))
                 template = ReplaceFirst(template, "{BookSubject}", SeederConstants.GetRandomItem(SeederConstants.BookSubjects));
+
+            // For a more coherent review, explicitly mention the book's title or main elements 25% of the time
+            if (_random.NextDouble() < 0.25 && !string.IsNullOrEmpty(theme.Title))
+            {
+                string mention;
+                if (_random.NextDouble() < 0.5)
+                {
+                    // Mention the title directly
+                    mention = $" \"{theme.Title}\" is {(_random.NextDouble() < 0.5 ? "truly" : "definitely")} ";
+                }
+                else
+                {
+                    // Use a thematic element
+                    string element = theme.MainNoun ?? theme.Subject ?? theme.Character ?? theme.Setting ?? theme.Adjective;
+                    if (!string.IsNullOrEmpty(element))
+                    {
+                        mention = $" The {element} in this book is ";
+                    }
+                    else
+                    {
+                        mention = " This book is ";
+                    }
+                }
+
+                string[] adjectives = rating >= 4
+                    ? new[] { "fascinating", "captivating", "brilliant", "remarkable" }
+                    : rating >= 3
+                        ? new[] { "interesting", "decent", "solid", "fine" }
+                        : new[] { "disappointing", "frustrating", "unconvincing", "tedious" };
+
+                mention += SeederConstants.GetRandomItem(adjectives.ToList()) + ". ";
+
+                // Insert this mention somewhere in the middle of the review
+                int insertPos = template.Length / 2;
+                int sentenceEnd = template.IndexOf(". ", insertPos);
+                if (sentenceEnd > 0)
+                {
+                    template = template.Insert(sentenceEnd + 1, mention);
+                }
+                else
+                {
+                    template += mention;
+                }
+            }
 
             return template;
         }

@@ -43,20 +43,24 @@ const BookCard: React.FC<BookCardProps> = ({ book, featured = false, index = 0 }
         }}
       >
         <Box sx={{ position: 'relative', overflow: 'hidden' }}>
-          <CardMedia
+            <CardMedia
             component="img"
             height={featured ? "380" : "320"}
             image={book.coverImage || 'https://via.placeholder.com/300x450?text=No+Cover'}
             alt={`Cover of ${book.title}`}
-            sx={{ 
-              objectFit: 'cover',
-              transition: 'transform 0.8s ease',
-              '&:hover': {
-                transform: 'scale(1.05)'
-              }
+            onError={(e) => {
+                // If image fails to load, replace with fallback
+                e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Cover';
             }}
-          />
-          
+            sx={{ 
+                objectFit: 'cover',
+                transition: 'transform 0.8s ease',
+                '&:hover': {
+                transform: 'scale(1.05)'
+                }
+            }}
+            />
+                    
           {/* Status badge overlay */}
           <Chip
             label={book.isAvailable ? 'AVAILABLE' : 'CHECKED OUT'}
