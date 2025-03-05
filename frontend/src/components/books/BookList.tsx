@@ -13,7 +13,9 @@ import {
   Checkbox,
   InputAdornment,
   IconButton,
-  useTheme
+  useTheme,
+  Pagination,
+  Stack
 } from '@mui/material';
 import { Search, Clear } from '@mui/icons-material';
 import debounce from 'lodash/debounce';
@@ -28,10 +30,11 @@ interface BookListProps {
   featuredCount?: number;
 }
 
-const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 10 }) => {
+const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 4 }) => {
   const [searchText, setSearchText] = useState('');
   const [books, setBooks] = useState<BookDto[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(!featured);
+  const [featuredLoading, setFeaturedLoading] = useState<boolean>(featured);
   const [searchParams, setSearchParams] = useState<BookFilterParams>({
     query: '',
     category: undefined,
@@ -40,6 +43,12 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
     sortBy: 'title',
     ascending: true,
   });
+  
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [displayedBooks, setDisplayedBooks] = useState<BookDto[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
   
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const [allAuthors, setAllAuthors] = useState<string[]>([]);
@@ -73,7 +82,12 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
 
   useEffect(() => {
     const fetchBooks = async () => {
-      setLoading(true);
+      if (featured) {
+        setFeaturedLoading(true);
+      } else {
+        setLoading(true);
+      }
+      
       if (searchInputRef.current === document.activeElement) {
         setSearchWasActive(true);
       }
@@ -82,11 +96,8 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
         let fetchedBooks: BookDto[];
         
         if (featured) {
+          // Explicitly request only the exact number we need for featured books
           fetchedBooks = await bookService.getFeaturedBooks(featuredCount);
-        // Filter to only show books with 4+ stars and available status
-        //   fetchedBooks = fetchedBooks.filter(book => 
-        //     book.averageRating >= 4.0 && book.isAvailable
-        //   );
         } else if (searchParams.query || searchParams.category || searchParams.author || searchParams.isAvailable !== undefined) {
           fetchedBooks = await bookService.searchBooks(searchParams);
         } else {
@@ -94,6 +105,11 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
         }
         
         setBooks(fetchedBooks);
+        
+        // Reset to first page whenever the book list changes in non-featured mode
+        if (!featured) {
+          setPage(1);
+        }
         
         if (!featured) {
           const uniqueCategories = [...new Set(fetchedBooks.map(book => book.category).filter(Boolean))];
@@ -105,12 +121,30 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
       } catch (error) {
         showAlert('error', 'Failed to load books');
       } finally {
-        setLoading(false);
+        if (featured) {
+          setFeaturedLoading(false);
+        } else {
+          setLoading(false);
+        }
       }
     };
 
     fetchBooks();
   }, [featured, featuredCount, searchParams, showAlert]);
+
+  // Update displayed books when books array or page changes
+  useEffect(() => {
+    if (featured) {
+      // Featured books don't use pagination
+      setDisplayedBooks(books);
+    } else {
+      // Calculate the books to display for current page
+      const startIndex = (page - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      setDisplayedBooks(books.slice(startIndex, endIndex));
+      setTotalPages(Math.ceil(books.length / pageSize));
+    }
+  }, [books, page, pageSize, featured]);
 
   useEffect(() => {
     if (!loading && searchWasActive && searchInputRef.current) {
@@ -160,7 +194,15 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
     setSearchParams({ ...searchParams, isAvailable: event.target.checked ? true : undefined });
   };
 
-  if (loading) {
+  // Handle page change
+  const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
+    setPage(value);
+    // Optionally scroll to top when changing pages
+    window.scrollTo(0, 0);
+  };
+
+  // Check appropriate loading state based on mode
+  if ((featured && featuredLoading) || (!featured && loading)) {
     return <Loading />;
   }
 
@@ -290,28 +332,48 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
             : "No books found. Try adjusting your search criteria."}
         </Typography>
       ) : (
-        <Grid 
-          container 
-          spacing={3}
-        >
-          {books.map((book, index) => (
-            <Grid 
-              item 
-              key={book.id} 
-              xs={12} 
-              sm={6} 
-              md={featured ? 3 : 4} 
-              lg={featured ? 3 : 3}
-              sx={{ transition: 'all 0.3s ease' }}
-            >
-              <BookCard 
-                book={book} 
-                featured={featured}
-                index={index}
+        <>
+          <Grid 
+            container 
+            spacing={3}
+          >
+            {displayedBooks.map((book, index) => (
+              <Grid 
+                item 
+                key={book.id} 
+                xs={12} 
+                sm={6} 
+                md={featured ? 3 : 4} 
+                lg={featured ? 3 : 3}
+                sx={{ transition: 'all 0.3s ease' }}
+              >
+                <BookCard 
+                  book={book} 
+                  featured={featured}
+                  index={index}
+                />
+              </Grid>
+            ))}
+          </Grid>
+          
+          {/* Pagination controls - only show for non-featured pages with multiple pages */}
+          {!featured && totalPages > 1 && (
+            <Stack spacing={2} alignItems="center" sx={{ mt: 4 }}>
+              <Pagination 
+                count={totalPages} 
+                page={page} 
+                onChange={handlePageChange}
+                color="primary"
+                showFirstButton
+                showLastButton
+                size="large"
               />
-            </Grid>
-          ))}
-        </Grid>
+              <Typography variant="body2" color="text.secondary">
+                Page {page} of {totalPages} • Showing {displayedBooks.length} of {books.length} books
+              </Typography>
+            </Stack>
+          )}
+        </>
       )}
     </>
   );

@@ -17,7 +17,9 @@ import {
   InputAdornment,
   Skeleton,
   Alert,
-  useTheme
+  useTheme,
+  Pagination,
+  Stack
 } from '@mui/material';
 import { 
   Add, 
@@ -45,6 +47,12 @@ const AdminBooksPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingBookId, setDeletingBookId] = useState<number | null>(null);
+  
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [displayedBooks, setDisplayedBooks] = useState<BookDto[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     const fetchBooks = async () => {
@@ -66,6 +74,7 @@ const AdminBooksPage: React.FC = () => {
     fetchBooks();
   }, [showAlert]);
 
+  // Filter books based on search term
   useEffect(() => {
     if (searchTerm.trim() === '') {
       setFilteredBooks(books);
@@ -79,7 +88,18 @@ const AdminBooksPage: React.FC = () => {
       );
       setFilteredBooks(filtered);
     }
+    // Reset to first page whenever the filtered list changes
+    setPage(1);
   }, [searchTerm, books]);
+
+  // Update displayed books when filtered books or page changes
+  useEffect(() => {
+    // Calculate the books to display for current page
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    setDisplayedBooks(filteredBooks.slice(startIndex, endIndex));
+    setTotalPages(Math.ceil(filteredBooks.length / pageSize));
+  }, [filteredBooks, page, pageSize]);
 
   const handleAddBook = () => {
     navigate('/admin/books/add');
@@ -115,6 +135,13 @@ const AdminBooksPage: React.FC = () => {
 
   const clearSearch = () => {
     setSearchTerm('');
+  };
+
+  // Handle page change
+  const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
+    setPage(value);
+    // Optionally scroll to top when changing pages
+    window.scrollTo(0, 0);
   };
 
   if (loading) {
@@ -265,81 +292,101 @@ const AdminBooksPage: React.FC = () => {
           )}
         </Paper>
       ) : (
-        <TableContainer component={Paper} sx={{ bgcolor: 'background.paper' }}>
-          <Table>
-            <TableHead sx={{ bgcolor: 'background.default' }}>
-              <TableRow>
-                <TableCell sx={{ color: 'text.secondary' }}>ID</TableCell>
-                <TableCell sx={{ color: 'text.secondary' }}>Title</TableCell>
-                <TableCell sx={{ color: 'text.secondary' }}>Author</TableCell>
-                <TableCell sx={{ color: 'text.secondary' }}>Category</TableCell>
-                <TableCell sx={{ color: 'text.secondary' }}>Status</TableCell>
-                <TableCell align="right" sx={{ color: 'text.secondary' }}>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredBooks.map((book) => (
-                <TableRow key={book.id} hover>
-                  <TableCell sx={{ color: 'text.primary' }}>{book.id}</TableCell>
-                  <TableCell>
-                    <Typography 
-                      sx={{ 
-                        fontWeight: 'medium',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        maxWidth: '300px',
-                        color: 'text.primary'
-                      }}
-                    >
-                      {book.title}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ color: 'text.primary' }}>{book.author}</TableCell>
-                  <TableCell sx={{ color: 'text.primary' }}>{book.category || '—'}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={book.isAvailable ? 'Available' : 'Checked Out'}
-                      color={book.isAvailable ? 'success' : 'error'}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <Tooltip title="View Book">
-                        <IconButton
-                          color="primary"
-                          onClick={() => handleViewBook(book.id)}
-                          size="small"
-                        >
-                          <Visibility />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Edit Book">
-                        <IconButton
-                          color="primary"
-                          onClick={() => handleEditBook(book.id)}
-                          size="small"
-                        >
-                          <Edit />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete Book">
-                        <IconButton
-                          color="error"
-                          onClick={() => handleDeleteBook(book.id)}
-                          size="small"
-                          disabled={deletingBookId === book.id}
-                        >
-                          <Delete />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </TableCell>
+        <>
+          <TableContainer component={Paper} sx={{ bgcolor: 'background.paper' }}>
+            <Table>
+              <TableHead sx={{ bgcolor: 'background.default' }}>
+                <TableRow>
+                  <TableCell sx={{ color: 'text.secondary' }}>ID</TableCell>
+                  <TableCell sx={{ color: 'text.secondary' }}>Title</TableCell>
+                  <TableCell sx={{ color: 'text.secondary' }}>Author</TableCell>
+                  <TableCell sx={{ color: 'text.secondary' }}>Category</TableCell>
+                  <TableCell sx={{ color: 'text.secondary' }}>Status</TableCell>
+                  <TableCell align="right" sx={{ color: 'text.secondary' }}>Actions</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </TableHead>
+              <TableBody>
+                {displayedBooks.map((book) => (
+                  <TableRow key={book.id} hover>
+                    <TableCell sx={{ color: 'text.primary' }}>{book.id}</TableCell>
+                    <TableCell>
+                      <Typography 
+                        sx={{ 
+                          fontWeight: 'medium',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: '300px',
+                          color: 'text.primary'
+                        }}
+                      >
+                        {book.title}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={{ color: 'text.primary' }}>{book.author}</TableCell>
+                    <TableCell sx={{ color: 'text.primary' }}>{book.category || '—'}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={book.isAvailable ? 'Available' : 'Checked Out'}
+                        color={book.isAvailable ? 'success' : 'error'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <Tooltip title="View Book">
+                          <IconButton
+                            color="primary"
+                            onClick={() => handleViewBook(book.id)}
+                            size="small"
+                          >
+                            <Visibility />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Edit Book">
+                          <IconButton
+                            color="primary"
+                            onClick={() => handleEditBook(book.id)}
+                            size="small"
+                          >
+                            <Edit />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete Book">
+                          <IconButton
+                            color="error"
+                            onClick={() => handleDeleteBook(book.id)}
+                            size="small"
+                            disabled={deletingBookId === book.id}
+                          >
+                            <Delete />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          
+          {/* Pagination controls - only show if we have multiple pages */}
+          {totalPages > 1 && (
+            <Stack spacing={2} alignItems="center" sx={{ mt: 4 }}>
+              <Pagination 
+                count={totalPages} 
+                page={page} 
+                onChange={handlePageChange}
+                color="primary"
+                showFirstButton
+                showLastButton
+                size="large"
+              />
+              <Typography variant="body2" color="text.secondary">
+                Page {page} of {totalPages} • Showing {displayedBooks.length} of {filteredBooks.length} books
+              </Typography>
+            </Stack>
+          )}
+        </>
       )}
     </Box>
   );

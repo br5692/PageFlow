@@ -9,11 +9,10 @@ export const bookService = {
     return response.data;
   },
   
-  getFeaturedBooks: async (count: number = 10): Promise<BookDto[]> => {
+  getFeaturedBooks: async (count: number = 4): Promise<BookDto[]> => {
     const response = await api.get<BookDto[]>('/Books/featured', { 
       params: { 
         count,
-        minRating: 4.0,
         availableOnly: true 
       } 
     });

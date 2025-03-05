@@ -19,7 +19,6 @@ const HomeHero: React.FC = () => {
         backgroundSize: 'cover',
         backgroundRepeat: 'no-repeat',
         backgroundPosition: 'center',
-        // Your Imgur image URL
         backgroundImage: 'url(https://i.imgur.com/5SBShO0.jpeg)',
         borderRadius: 0,
         overflow: 'hidden',
