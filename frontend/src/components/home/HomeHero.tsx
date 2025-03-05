@@ -1,6 +1,6 @@
+// src/components/home/HomeHero.tsx
 import React from 'react';
 import { Box, Typography, Button, Container, Paper, useTheme, useMediaQuery } from '@mui/material';
-import { MenuBook } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
@@ -15,20 +15,22 @@ const HomeHero: React.FC = () => {
       sx={{
         position: 'relative',
         color: '#fff',
-        mb: 4,
+        mb: 6,
         backgroundSize: 'cover',
         backgroundRepeat: 'no-repeat',
         backgroundPosition: 'center',
-        backgroundImage: 'url(https://source.unsplash.com/featured/?library,books)',
-        borderRadius: 2,
+        // Your Imgur image URL
+        backgroundImage: 'url(https://i.imgur.com/pgOeIna.png)',
+        borderRadius: 0,
         overflow: 'hidden',
-        height: { xs: 350, md: 400 },
+        height: { xs: 450, md: 600 },
         display: 'flex',
         alignItems: 'center',
+        maxWidth: '100%',
+        boxShadow: 'none',
       }}
-      elevation={3}
     >
-      {/* Dark overlay */}
+      {/* Dark overlay to ensure text readability */}
       <Box
         sx={{
           position: 'absolute',
@@ -36,50 +38,64 @@ const HomeHero: React.FC = () => {
           bottom: 0,
           right: 0,
           left: 0,
-          backgroundColor: 'rgba(0,0,0,.7)',
-          backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.8), rgba(0,0,0,0.5))',
+          backgroundColor: 'rgba(0,0,0,.3)',
+          backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.2) 100%)',
         }}
       />
       
       {/* Content */}
-      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, py: 4 }}>
-        <Box sx={{ maxWidth: { xs: '100%', md: '60%' } }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <MenuBook sx={{ fontSize: 40, mr: 2 }} />
-            <Typography 
-              variant={isMobile ? 'h4' : 'h3'} 
-              component="h1" 
-              fontWeight="bold"
-              sx={{ 
-                textShadow: '1px 1px 3px rgba(0,0,0,0.8)',
-                lineHeight: 1.2
-              }}
-            >
-              Your Library, Reimagined
-            </Typography>
-          </Box>
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, py: 8 }}>
+        <Box sx={{ maxWidth: { xs: '100%', md: '50%' } }}>
+          <Typography 
+            variant={isMobile ? 'h4' : 'h2'} 
+            component="h1" 
+            fontWeight="700"
+            sx={{ 
+              mb: 1,
+              letterSpacing: '-0.02em',
+              textTransform: 'uppercase',
+            }}
+          >
+            THE PREMIUM
+          </Typography>
+          <Typography 
+            variant={isMobile ? 'h3' : 'h1'} 
+            component="div" 
+            fontWeight="700"
+            sx={{ 
+              mb: 4,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            LITERARY EXPERIENCE
+          </Typography>
 
           <Typography 
             variant={isMobile ? 'body1' : 'h6'} 
             sx={{ 
-              mb: 4, 
-              textShadow: '1px 1px 2px rgba(0,0,0,0.6)',
+              mb: 6, 
+              fontWeight: 400,
+              opacity: 0.9,
               maxWidth: '90%'
             }}
           >
-            Discover new titles, manage your reading list, and join a community of book lovers with our modern library system.
+            Discover exceptional literature, crafted reading experiences, and a community of discerning book enthusiasts.
           </Typography>
 
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
             {!isAuthenticated ? (
               <>
                 <Button 
                   variant="contained" 
                   size="large" 
                   onClick={() => navigate('/register')}
-                  sx={{ fontWeight: 'bold' }}
+                  sx={{ 
+                    fontWeight: 'bold',
+                    minWidth: 180,
+                    backgroundColor: theme.palette.primary.main,
+                  }}
                 >
-                  Get Started
+                  GET STARTED
                 </Button>
                 <Button 
                   variant="outlined" 
@@ -88,13 +104,14 @@ const HomeHero: React.FC = () => {
                   sx={{ 
                     borderColor: 'white', 
                     color: 'white',
+                    minWidth: 180,
                     '&:hover': {
                       borderColor: 'white',
                       backgroundColor: 'rgba(255,255,255,0.1)'
                     }
                   }}
                 >
-                  Browse Books
+                  BROWSE COLLECTION
                 </Button>
               </>
             ) : isCustomer ? (
@@ -103,9 +120,12 @@ const HomeHero: React.FC = () => {
                   variant="contained" 
                   size="large" 
                   onClick={() => navigate('/books')}
-                  sx={{ fontWeight: 'bold' }}
+                  sx={{ 
+                    fontWeight: 'bold',
+                    minWidth: 180,
+                  }}
                 >
-                  Browse Books
+                  BROWSE BOOKS
                 </Button>
                 <Button 
                   variant="outlined" 
@@ -114,13 +134,14 @@ const HomeHero: React.FC = () => {
                   sx={{ 
                     borderColor: 'white', 
                     color: 'white',
+                    minWidth: 180,
                     '&:hover': {
                       borderColor: 'white',
                       backgroundColor: 'rgba(255,255,255,0.1)'
                     }
                   }}
                 >
-                  My Checkouts
+                  MY CHECKOUTS
                 </Button>
               </>
             ) : isLibrarian ? (
@@ -129,9 +150,12 @@ const HomeHero: React.FC = () => {
                   variant="contained" 
                   size="large" 
                   onClick={() => navigate('/admin/books')}
-                  sx={{ fontWeight: 'bold' }}
+                  sx={{ 
+                    fontWeight: 'bold',
+                    minWidth: 180,
+                  }}
                 >
-                  Manage Books
+                  MANAGE BOOKS
                 </Button>
                 <Button 
                   variant="outlined" 
@@ -140,13 +164,14 @@ const HomeHero: React.FC = () => {
                   sx={{ 
                     borderColor: 'white', 
                     color: 'white',
+                    minWidth: 180,
                     '&:hover': {
                       borderColor: 'white',
                       backgroundColor: 'rgba(255,255,255,0.1)'
                     }
                   }}
                 >
-                  View Checkouts
+                  VIEW CHECKOUTS
                 </Button>
               </>
             ) : null}
