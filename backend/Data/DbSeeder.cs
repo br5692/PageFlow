@@ -45,11 +45,11 @@ namespace backend.Data
                         .RuleFor(b => b.CoverImage, f => f.Image.PicsumUrl())
                         .RuleFor(b => b.IsAvailable, true); // Explicitly set IsAvailable to true
 
-                    var fakeBooks = faker.Generate(5000); // Generate 5000 fake books
+                    var fakeBooks = faker.Generate(2000); // Generate 2000 fake books
                     _dbContext.Books.AddRange(fakeBooks);
                     await _dbContext.SaveChangesAsync();
 
-                    Console.WriteLine("Successfully seeded database with 1000 Bogus-generated books.");
+                    Console.WriteLine("Successfully seeded database with 2000 Bogus-generated books.");
                 }
                 else
                 {

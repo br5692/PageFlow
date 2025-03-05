@@ -1,41 +1,36 @@
+// src/components/books/BookList.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Grid,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Box,
-  Typography,
-  SelectChangeEvent,
-  FormControlLabel,
-  Checkbox,
-  InputAdornment,
-  IconButton,
-  Pagination,
-  Stack
+  Grid, TextField, FormControl, InputLabel, Select, MenuItem, Box,
+  Typography, SelectChangeEvent, FormControlLabel, Checkbox, InputAdornment,
+  IconButton, Pagination, Stack, Table, TableHead, TableBody, TableRow,
+  TableCell, Tooltip, Chip, TableContainer, Paper, Button
 } from '@mui/material';
-import { Search, Clear } from '@mui/icons-material';
+import { Search, Clear, Add, Edit, Delete, Visibility } from '@mui/icons-material';
 import debounce from 'lodash/debounce';
 import { BookDto, BookFilterParams } from '../../types/book.types';
 import { bookService } from '../../services/bookService';
 import BookCard from './BookCard';
 import Loading from '../common/Loading';
 import { useAlert } from '../../context/AlertContext';
+import { useNavigate } from 'react-router-dom';
+import { bookCache } from '../../utils/bookCache';
 
 interface BookListProps {
   featured?: boolean;
   featuredCount?: number;
+  admin?: boolean;
 }
 
-const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 4 }) => {
+const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 4, admin = false }) => {
+  const navigate = useNavigate();
   const [searchText, setSearchText] = useState('');
   const [books, setBooks] = useState<BookDto[]>([]);
   const [loading, setLoading] = useState<boolean>(!featured);
   const [featuredLoading, setFeaturedLoading] = useState<boolean>(featured);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
+  const [deletingBookId, setDeletingBookId] = useState<number | null>(null);
   const pageSize = 20;
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const [allAuthors, setAllAuthors] = useState<string[]>([]);
@@ -84,34 +79,43 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 4
       } else {
         setLoading(true);
       }
-
+  
       if (searchInputRef.current === document.activeElement) {
         setSearchWasActive(true);
       }
-
+  
       try {
-        let response;
-
         if (featured) {
-          response = await bookService.getFeaturedBooks(featuredCount);
-          setBooks(response.data);
+          // Use the bookCache utility instead of direct variable
+          const cachedBooks = bookCache.getFeaturedBooks();
+          if (cachedBooks) {
+            setBooks(cachedBooks);
+          } else {
+            const response = await bookService.getFeaturedBooks(featuredCount);
+            // Here's the fix - properly access data from the PaginatedResponse
+            setBooks(response.data);
+            // Store in cache using the utility
+            bookCache.setFeaturedBooks(response.data);
+          }
         } else {
           const params = {
             ...searchParams,
             page,
             pageSize
           };
-
+  
+          let response;
           if (searchParams.query || searchParams.category || searchParams.author || searchParams.isAvailable !== undefined) {
             response = await bookService.searchBooks(params);
           } else {
             response = await bookService.getAllBooks(params.sortBy, params.ascending, page, pageSize);
           }
-
+  
           setBooks(response.data);
           setTotalPages(response.totalPages);
         }
       } catch (error) {
+        console.error("Error fetching books:", error);
         showAlert('error', 'Failed to load books');
       } finally {
         if (featured) {
@@ -121,7 +125,7 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 4
         }
       }
     };
-
+  
     fetchBooks();
   }, [featured, featuredCount, searchParams, page, pageSize, showAlert]);
 
@@ -187,6 +191,33 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 4
     window.scrollTo(0, 0);
   }, []);
 
+  // Admin-specific functions
+  const handleAddBook = () => navigate('/admin/books/add');
+  const handleEditBook = (id: number) => navigate(`/admin/books/edit/${id}`);
+  const handleViewBook = (id: number) => navigate(`/books/${id}`);
+
+  const handleDeleteBook = async (id: number) => {
+    if (window.confirm('Are you sure you want to delete this book? This action cannot be undone.')) {
+      try {
+        setDeletingBookId(id);
+        await bookService.deleteBook(id);
+        
+        // Update local state to remove the deleted book
+        setBooks(prev => prev.filter(book => book.id !== id));
+        showAlert('success', 'Book deleted successfully');
+        
+        // If this was the last book on the current page and not the first page, go to previous page
+        if (books.length === 1 && page > 1) {
+          setPage(prev => prev - 1);
+        }
+      } catch (error: any) {
+        showAlert('error', error.response?.data?.message || 'Failed to delete book');
+      } finally {
+        setDeletingBookId(null);
+      }
+    }
+  };
+
   if ((featured && featuredLoading) || (!featured && loading)) {
     return <Loading />;
   }
@@ -195,6 +226,19 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 4
     <>
       {!featured && (
         <Box sx={{ mb: 4 }}>
+          {admin && (
+            <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<Add />}
+                onClick={handleAddBook}
+              >
+                Add New Book
+              </Button>
+            </Box>
+          )}
+          
           <Grid container spacing={2}>
             <Grid item xs={12} md={4}>
               <TextField
@@ -318,25 +362,105 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 4
         </Typography>
       ) : (
         <>
-          <Grid container spacing={3}>
-            {books.map((book, index) => (
-              <Grid 
-                item 
-                key={book.id} 
-                xs={12} 
-                sm={6} 
-                md={featured ? 3 : 4} 
-                lg={featured ? 3 : 3}
-                sx={{ transition: 'all 0.3s ease' }}
-              >
-                <BookCard 
-                  book={book} 
-                  featured={featured}
-                  index={index}
-                />
-              </Grid>
-            ))}
-          </Grid>
+          {admin && !featured ? (
+            // Admin Table View
+            <TableContainer component={Paper} sx={{ bgcolor: 'background.paper' }}>
+              <Table>
+                <TableHead sx={{ bgcolor: 'background.default' }}>
+                  <TableRow>
+                    <TableCell sx={{ color: 'text.secondary' }}>ID</TableCell>
+                    <TableCell sx={{ color: 'text.secondary' }}>Title</TableCell>
+                    <TableCell sx={{ color: 'text.secondary' }}>Author</TableCell>
+                    <TableCell sx={{ color: 'text.secondary' }}>Category</TableCell>
+                    <TableCell sx={{ color: 'text.secondary' }}>Status</TableCell>
+                    <TableCell align="right" sx={{ color: 'text.secondary' }}>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {books.map((book) => (
+                    <TableRow key={book.id} hover>
+                      <TableCell sx={{ color: 'text.primary' }}>{book.id}</TableCell>
+                      <TableCell>
+                        <Typography 
+                          sx={{ 
+                            fontWeight: 'medium',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            maxWidth: '300px',
+                            color: 'text.primary'
+                          }}
+                        >
+                          {book.title}
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ color: 'text.primary' }}>{book.author}</TableCell>
+                      <TableCell sx={{ color: 'text.primary' }}>{book.category || '—'}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={book.isAvailable ? 'Available' : 'Checked Out'}
+                          color={book.isAvailable ? 'success' : 'error'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <Tooltip title="View Book">
+                            <IconButton
+                              color="primary"
+                              onClick={() => handleViewBook(book.id)}
+                              size="small"
+                            >
+                              <Visibility />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Edit Book">
+                            <IconButton
+                              color="primary"
+                              onClick={() => handleEditBook(book.id)}
+                              size="small"
+                            >
+                              <Edit />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete Book">
+                            <IconButton
+                              color="error"
+                              onClick={() => handleDeleteBook(book.id)}
+                              size="small"
+                              disabled={deletingBookId === book.id}
+                            >
+                              <Delete />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            // Regular Card View
+            <Grid container spacing={3}>
+              {books.map((book, index) => (
+                <Grid 
+                  item 
+                  key={book.id} 
+                  xs={12} 
+                  sm={6} 
+                  md={featured ? 3 : 4} 
+                  lg={featured ? 3 : 3}
+                  sx={{ transition: 'all 0.3s ease' }}
+                >
+                  <BookCard 
+                    book={book} 
+                    featured={featured}
+                    index={index}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          )}
           
           {!featured && totalPages > 1 && (
             <Stack spacing={2} alignItems="center" sx={{ mt: 4 }}>
