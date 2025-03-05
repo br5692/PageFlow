@@ -1,7 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { Box, Container, Typography, Divider } from '@mui/material';
 import HomeHero from '../components/home/HomeHero';
-import FeaturedCategories from '../components/home/FeaturedCategories';
+// import FeaturedCategories from '../components/home/FeaturedCategories';
 import { useAuth } from '../context/AuthContext';
 import Loading from '../components/common/Loading';
 

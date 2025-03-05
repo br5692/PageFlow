@@ -1,4 +1,3 @@
-// src/pages/AdminBooksPage.tsx
 import React from 'react';
 import { Box } from '@mui/material';
 import BookList from '../components/books/BookList';
