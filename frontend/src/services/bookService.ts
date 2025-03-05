@@ -1,16 +1,16 @@
 import api from './api';
-import { BookDto, BookCreateDto, BookUpdateDto, BookFilterParams } from '../types/book.types';
+import { BookDto, BookCreateDto, BookUpdateDto, BookFilterParams, PaginatedResponse } from '../types/book.types';
 import { ReviewDto } from '../types/review.types';
 
 export const bookService = {
-  getAllBooks: async (sortBy?: string, ascending: boolean = true): Promise<BookDto[]> => {
-    const params = { sortBy, ascending };
-    const response = await api.get<BookDto[]>('/Books', { params });
+  getAllBooks: async (sortBy?: string, ascending: boolean = true, page: number = 1, pageSize: number = 20): Promise<PaginatedResponse<BookDto>> => {
+    const params = { sortBy, ascending, page, pageSize };
+    const response = await api.get<PaginatedResponse<BookDto>>('/Books', { params });
     return response.data;
   },
   
-  getFeaturedBooks: async (count: number = 4): Promise<BookDto[]> => {
-    const response = await api.get<BookDto[]>('/Books/featured', { 
+  getFeaturedBooks: async (count: number = 4): Promise<PaginatedResponse<BookDto>> => {
+    const response = await api.get<PaginatedResponse<BookDto>>('/Books/featured', { 
       params: { 
         count,
         availableOnly: true 
@@ -19,11 +19,12 @@ export const bookService = {
     return response.data;
   },
   
-  searchBooks: async (params: BookFilterParams): Promise<BookDto[]> => {
-    const response = await api.get<BookDto[]>('/Books/search', { params });
+  searchBooks: async (params: BookFilterParams): Promise<PaginatedResponse<BookDto>> => {
+    const response = await api.get<PaginatedResponse<BookDto>>('/Books/search', { params });
     return response.data;
   },
   
+  // Keep other methods unchanged
   getBookById: async (id: number): Promise<BookDto> => {
     const response = await api.get<BookDto>(`/Books/${id}`);
     return response.data;

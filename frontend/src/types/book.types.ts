@@ -45,4 +45,14 @@ export interface BookDto {
     isAvailable?: boolean;
     sortBy?: string;
     ascending?: boolean;
+    page?: number;
+    pageSize?: number;
+  }
+
+  export interface PaginatedResponse<T> {
+    data: T[];
+    totalCount: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
   }

@@ -1,21 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Box,
-  Button,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Grid,
-  Paper,
-  Typography,
-  Skeleton,
-  Alert,
-  Chip,
-  Stack,
-  FormHelperText,
+  Box, Button, TextField, FormControl, InputLabel, Select, MenuItem,
+  Grid, Paper, Typography, Alert, Chip, Stack, FormHelperText,
 } from '@mui/material';
 import { Save, ArrowBack, Delete, Info } from '@mui/icons-material';
 import { useFormik } from 'formik';
@@ -25,15 +12,10 @@ import { bookService } from '../../services/bookService';
 import { useAlert } from '../../context/AlertContext';
 import { getCurrentDateISOString } from '../../utils/dateUtils';
 
-interface BookFormProps {
-  isEdit?: boolean;
-}
-
-const BookForm: React.FC<BookFormProps> = ({ isEdit = false }) => {
+const BookForm: React.FC<{ isEdit?: boolean }> = ({ isEdit = false }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { showAlert } = useAlert();
-  const [loading, setLoading] = useState<boolean>(isEdit);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -51,18 +33,15 @@ const BookForm: React.FC<BookFormProps> = ({ isEdit = false }) => {
   };
 
   const validationSchema = Yup.object({
-    title: Yup.string().required('Title is required'),
-    author: Yup.string().required('Author is required'),
+    title: Yup.string().required('Required'),
+    author: Yup.string().required('Required'),
     isbn: Yup.string().nullable(),
-    publishedDate: Yup.date().required('Publication date is required'),
+    publishedDate: Yup.date().required('Required'),
     description: Yup.string().nullable(),
-    coverImage: Yup.string().url('Must be a valid URL').nullable(),
+    coverImage: Yup.string().url('Invalid URL').nullable(),
     publisher: Yup.string().nullable(),
     category: Yup.string().nullable(),
-    pageCount: Yup.number()
-      .min(1, 'Must be at least 1 page')
-      .max(10000, 'Must be less than 10,000 pages')
-      .required('Page count is required'),
+    pageCount: Yup.number().min(1).max(10000).required('Required'),
   });
 
   const formik = useFormik({
@@ -72,22 +51,15 @@ const BookForm: React.FC<BookFormProps> = ({ isEdit = false }) => {
       try {
         setSubmitting(true);
         if (isEdit && id) {
-          const bookId = parseInt(id);
-          const updateDto: BookUpdateDto = {
-            id: bookId,
-            ...values,
-          };
-          await bookService.updateBook(updateDto);
-          showAlert('success', 'Book updated successfully');
+          await bookService.updateBook({ id: parseInt(id), ...values });
+          showAlert('success', 'Book updated');
         } else {
           await bookService.createBook(values);
-          showAlert('success', 'Book created successfully');
+          showAlert('success', 'Book created');
         }
         navigate('/admin/books');
       } catch (error: any) {
-        const errorMessage = error.response?.data?.message || 
-          (isEdit ? 'Failed to update book' : 'Failed to create book');
-        showAlert('error', errorMessage);
+        showAlert('error', error.response?.data?.message || 'Operation failed');
       } finally {
         setSubmitting(false);
       }
@@ -95,347 +67,170 @@ const BookForm: React.FC<BookFormProps> = ({ isEdit = false }) => {
   });
 
   useEffect(() => {
-    const fetchBookCategories = async () => {
+    const fetchCategories = async () => {
       try {
-        const books = await bookService.getAllBooks();
-        const uniqueCategories = [...new Set(books
-          .map(book => book.category)
-          .filter(Boolean)
-        )];
-        
-        // Add some standard categories if they're not in the list
-        const standardCategories = [
-          'Fiction', 'Non-Fiction', 'Science Fiction', 'Fantasy', 
-          'Mystery', 'Thriller', 'Romance', 'Biography', 
-          'History', 'Science', 'Technology', 'Self-Help'
-        ];
-        
-        const allCategories = Array.from(
-          new Set([...uniqueCategories, ...standardCategories])
-        ).sort();
-        
-        setCategories(allCategories as string[]);
+        const { data } = await bookService.getAllBooks(undefined, true, 1, 1000);
+        const uniqueCategories = Array.from(
+          new Set(data.map(book => book.category).filter(Boolean))
+        ) as string[];
+        setCategories([...uniqueCategories, 'Fiction', 'Non-Fiction', 'Science', 'Technology']);
       } catch (error) {
         console.error('Failed to fetch categories:', error);
       }
     };
-
-    fetchBookCategories();
+    fetchCategories();
   }, []);
 
   useEffect(() => {
-    const fetchBookDetails = async () => {
-      if (isEdit && id) {
-        try {
-          setLoading(true);
-          const bookId = parseInt(id);
-          const book = await bookService.getBookById(bookId);
-          
-          formik.setValues({
-            title: book.title,
-            author: book.author,
-            isbn: book.isbn || '',
-            publishedDate: book.publishedDate.split('T')[0], // Format date for input field
-            description: book.description || '',
-            coverImage: book.coverImage || '',
-            publisher: book.publisher || '',
-            category: book.category || '',
-            pageCount: book.pageCount,
-          });
-          setError(null);
-        } catch (error: any) {
-          const errorMessage = error.response?.data?.message || 'Failed to load book details';
-          setError(errorMessage);
-          showAlert('error', errorMessage);
-        } finally {
-          setLoading(false);
-        }
+    const fetchBook = async () => {
+      if (!isEdit || !id) return;
+      
+      try {
+        const book = await bookService.getBookById(parseInt(id));
+        formik.setValues({
+          ...book,
+          publishedDate: book.publishedDate.split('T')[0]
+        });
+      } catch (error: any) {
+        setError(error.response?.data?.message || 'Failed to load book');
       }
     };
-
-    fetchBookDetails();
-  }, [id, isEdit, showAlert]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (loading) {
-    return (
-      <Paper elevation={2} sx={{ p: 3 }}>
-        <Box sx={{ mb: 3 }}>
-          <Skeleton variant="text" height={40} width="50%" />
-          <Skeleton variant="text" height={20} width="70%" />
-        </Box>
-        <Grid container spacing={2}>
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Grid item xs={12} sm={6} key={i}>
-              <Skeleton variant="rectangular" height={56} width="100%" />
-            </Grid>
-          ))}
-          <Grid item xs={12}>
-            <Skeleton variant="rectangular" height={120} width="100%" />
-          </Grid>
-        </Grid>
-      </Paper>
-    );
-  }
-
-  if (error) {
-    return (
-      <Alert 
-        severity="error" 
-        action={
-          <Button color="inherit" size="small" onClick={() => navigate('/admin/books')}>
-            Back to Books
-          </Button>
-        }
-      >
-        {error}
-      </Alert>
-    );
-  }
+    fetchBook();
+  }, [id, isEdit]);
 
   return (
-    <Paper elevation={2} sx={{ p: 3 }}>
-      <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 3 }}>
-        <Button 
-          startIcon={<ArrowBack />} 
-          onClick={() => navigate('/admin/books')}
-          variant="outlined"
-        >
+    <Paper sx={{ p: 3 }}>
+      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+        <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate(-1)}>
           Back
         </Button>
-        <Typography variant="h5" component="h1">
-          {isEdit ? 'Edit Book' : 'Add New Book'}
-        </Typography>
+        <Typography variant="h5">{isEdit ? 'Edit Book' : 'Add Book'}</Typography>
       </Stack>
-      
-      {/* Form help information box */}
-      <Alert 
-        severity="info" 
-        icon={<Info />} 
-        sx={{ mb: 3 }}
-      >
-        {isEdit 
-          ? 'Update the book information using the form below. All fields marked with * are required.'
-          : 'Add a new book to the library collection. All fields marked with * are required.'}
+
+      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+
+      <Alert severity="info" icon={<Info />} sx={{ mb: 3 }}>
+        {isEdit ? 'Update book details below' : 'Fill in the form to add a new book'}
       </Alert>
-      
-      <Box component="form" onSubmit={formik.handleSubmit} noValidate>
+
+      <Box component="form" onSubmit={formik.handleSubmit}>
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
+        {(['title', 'author', 'isbn', 'publisher'] as (keyof BookCreateDto)[]).map((field) => (
+        <Grid item xs={12} sm={6} key={field}>
             <TextField
-              fullWidth
-              id="title"
-              name="title"
-              label="Title"
-              value={formik.values.title}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.title && Boolean(formik.errors.title)}
-              helperText={formik.touched.title && formik.errors.title}
-              required
-              disabled={submitting}
-              variant="outlined"
+            fullWidth
+            label={field.charAt(0).toUpperCase() + field.slice(1)}
+            {...formik.getFieldProps(field)}
+            error={formik.touched[field] && !!formik.errors[field]}
+            helperText={formik.touched[field] && formik.errors[field]}
+            disabled={submitting}
             />
-          </Grid>
-          
+        </Grid>
+        ))}
+
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
-              id="author"
-              name="author"
-              label="Author"
-              value={formik.values.author}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.author && Boolean(formik.errors.author)}
-              helperText={formik.touched.author && formik.errors.author}
-              required
-              disabled={submitting}
-              variant="outlined"
-            />
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              id="isbn"
-              name="isbn"
-              label="ISBN"
-              value={formik.values.isbn || ''}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.isbn && Boolean(formik.errors.isbn)}
-              helperText={formik.touched.isbn && formik.errors.isbn}
-              disabled={submitting}
-              variant="outlined"
-            />
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              id="publishedDate"
-              name="publishedDate"
-              label="Publication Date"
               type="date"
-              value={formik.values.publishedDate}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.publishedDate && Boolean(formik.errors.publishedDate)}
+              label="Publication Date"
+              {...formik.getFieldProps('publishedDate')}
+              InputLabelProps={{ shrink: true }}
+              error={formik.touched.publishedDate && !!formik.errors.publishedDate}
               helperText={formik.touched.publishedDate && formik.errors.publishedDate}
-              required
               disabled={submitting}
-              variant="outlined"
-              InputLabelProps={{
-                shrink: true,
-              }}
             />
           </Grid>
-          
+
           <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              id="publisher"
-              name="publisher"
-              label="Publisher"
-              value={formik.values.publisher || ''}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.publisher && Boolean(formik.errors.publisher)}
-              helperText={formik.touched.publisher && formik.errors.publisher}
-              disabled={submitting}
-              variant="outlined"
-            />
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <FormControl
-              fullWidth
-              error={formik.touched.category && Boolean(formik.errors.category)}
-            >
-              <InputLabel id="category-label">Category</InputLabel>
+            <FormControl fullWidth error={formik.touched.category && !!formik.errors.category}>
+              <InputLabel>Category</InputLabel>
               <Select
-                labelId="category-label"
-                id="category"
-                name="category"
-                value={formik.values.category || ''}
+                {...formik.getFieldProps('category')}
                 label="Category"
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
                 disabled={submitting}
               >
-                <MenuItem value="">
-                  <em>None</em>
-                </MenuItem>
-                {categories.map((category) => (
-                  <MenuItem key={category} value={category}>
-                    {category}
-                  </MenuItem>
+                <MenuItem value=""><em>None</em></MenuItem>
+                {categories.map(category => (
+                  <MenuItem key={category} value={category}>{category}</MenuItem>
                 ))}
               </Select>
-              {formik.touched.category && formik.errors.category && (
-                <FormHelperText>{formik.errors.category as string}</FormHelperText>
-              )}
+              <FormHelperText>{formik.errors.category}</FormHelperText>
             </FormControl>
           </Grid>
-          
+
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
-              id="pageCount"
-              name="pageCount"
-              label="Page Count"
               type="number"
-              value={formik.values.pageCount}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.pageCount && Boolean(formik.errors.pageCount)}
+              label="Page Count"
+              {...formik.getFieldProps('pageCount')}
+              error={formik.touched.pageCount && !!formik.errors.pageCount}
               helperText={formik.touched.pageCount && formik.errors.pageCount}
-              required
               disabled={submitting}
-              variant="outlined"
-              inputProps={{ min: 1 }}
             />
           </Grid>
-          
+
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
-              id="coverImage"
-              name="coverImage"
               label="Cover Image URL"
-              value={formik.values.coverImage || ''}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.coverImage && Boolean(formik.errors.coverImage)}
-              helperText={formik.touched.coverImage && formik.errors.coverImage || 'Enter a valid image URL for the book cover'}
+              {...formik.getFieldProps('coverImage')}
+              error={formik.touched.coverImage && !!formik.errors.coverImage}
+              helperText={formik.touched.coverImage && formik.errors.coverImage}
               disabled={submitting}
-              variant="outlined"
             />
           </Grid>
-          
+
           <Grid item xs={12}>
             <TextField
               fullWidth
-              id="description"
-              name="description"
-              label="Description"
               multiline
               rows={4}
-              value={formik.values.description || ''}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.description && Boolean(formik.errors.description)}
+              label="Description"
+              {...formik.getFieldProps('description')}
+              error={formik.touched.description && !!formik.errors.description}
               helperText={formik.touched.description && formik.errors.description}
               disabled={submitting}
-              variant="outlined"
             />
           </Grid>
         </Grid>
-        
+
         <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
           <Button
             variant="outlined"
             onClick={() => navigate('/admin/books')}
-            startIcon={<ArrowBack />}
             disabled={submitting}
           >
             Cancel
           </Button>
-          
+
           <Box>
             {isEdit && (
               <Button
-                type="button"
                 variant="outlined"
                 color="error"
+                startIcon={<Delete />}
                 onClick={() => {
-                  if (window.confirm('Are you sure you want to delete this book?')) {
-                    bookService.deleteBook(parseInt(id as string))
-                      .then(() => {
-                        showAlert('success', 'Book deleted successfully');
-                        navigate('/admin/books');
-                      })
-                      .catch((error: any) => {
-                        showAlert('error', error.response?.data?.message || 'Failed to delete book');
-                      });
+                  if (window.confirm('Delete this book?')) {
+                    bookService.deleteBook(parseInt(id!))
+                      .then(() => navigate('/admin/books'))
+                      .catch(error => showAlert('error', error.message));
                   }
                 }}
-                startIcon={<Delete />}
                 sx={{ mr: 2 }}
                 disabled={submitting}
               >
                 Delete
               </Button>
             )}
-            
+
             <Button
               type="submit"
               variant="contained"
-              color="primary"
               startIcon={<Save />}
               disabled={submitting || !formik.isValid}
             >
-              {submitting ? 'Saving...' : isEdit ? 'Update Book' : 'Add Book'}
+              {submitting ? 'Saving...' : isEdit ? 'Update' : 'Create'}
             </Button>
           </Box>
         </Box>

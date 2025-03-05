@@ -4,6 +4,7 @@ import { Typography, Divider, Box } from '@mui/material';
 interface PageTitleProps {
   title: string;
   subtitle?: string;
+  action?: React.ReactNode; // Add this line
 }
 
 const PageTitle: React.FC<PageTitleProps> = ({ title, subtitle }) => {
