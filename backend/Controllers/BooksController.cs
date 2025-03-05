@@ -27,14 +27,24 @@ namespace backend.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<BookDto>>> GetAllBooks(
             [FromQuery] string? sortBy = null,
-            [FromQuery] bool ascending = true
+            [FromQuery] bool ascending = true,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20
             )
         {
             try
             {
                 _logger.LogInformation("Getting all books");
-                var books = await _bookService.GetAllBooksAsync(sortBy, ascending);
-                return Ok(books);
+                var (books, totalCount) = await _bookService.GetAllBooksAsync(sortBy, ascending, page, pageSize);
+
+                return Ok(new
+                {
+                    data = books,
+                    totalCount,
+                    page,
+                    pageSize,
+                    totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+                });
             }
             catch (Exception ex)
             {
@@ -52,8 +62,13 @@ namespace backend.Controllers
         {
             try
             {
-                var books = await _bookService.GetFeaturedBooksAsync(count, minRating, availableOnly);
-                return Ok(books);
+                var (books, totalCount) = await _bookService.GetFeaturedBooksAsync(count, minRating, availableOnly);
+
+                return Ok(new
+                {
+                    data = books,
+                    totalCount
+                });
             }
             catch (Exception ex)
             {
@@ -69,14 +84,24 @@ namespace backend.Controllers
             [FromQuery] string? author = null,
             [FromQuery] bool? isAvailable = null,
             [FromQuery] string? sortBy = null,
-            [FromQuery] bool ascending = true
+            [FromQuery] bool ascending = true,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20
             )
         {
             try
             {
-                var books = await _bookService.SearchBooksAsync(
-                    query, category, author, isAvailable, sortBy, ascending);
-                return Ok(books);
+                var (books, totalCount) = await _bookService.SearchBooksAsync(
+                    query, category, author, isAvailable, sortBy, ascending, page, pageSize);
+
+                return Ok(new
+                {
+                    data = books,
+                    totalCount,
+                    page,
+                    pageSize,
+                    totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+                });
             }
             catch (Exception ex)
             {

@@ -45,7 +45,7 @@ namespace backend.Data
                         .RuleFor(b => b.CoverImage, f => f.Image.PicsumUrl())
                         .RuleFor(b => b.IsAvailable, true); // Explicitly set IsAvailable to true
 
-                    var fakeBooks = faker.Generate(1000); // Generate 1000 fake books
+                    var fakeBooks = faker.Generate(5000); // Generate 5000 fake books
                     _dbContext.Books.AddRange(fakeBooks);
                     await _dbContext.SaveChangesAsync();
 

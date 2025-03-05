@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Card, CardContent, CardMedia, Typography, Rating, Box, Chip, CardActionArea } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { BookDto } from '../../types/book.types';
@@ -11,6 +11,10 @@ interface BookCardProps {
 
 const BookCard: React.FC<BookCardProps> = ({ book, featured = false, index = 0 }) => {
   const navigate = useNavigate();
+
+  const handleClick = useCallback(() => {
+    navigate(`/books/${book.id}`);
+  }, [navigate, book.id]);
 
   return (
     <Card 
@@ -31,7 +35,7 @@ const BookCard: React.FC<BookCardProps> = ({ book, featured = false, index = 0 }
       }}
     >
       <CardActionArea 
-        onClick={() => navigate(`/books/${book.id}`)}
+        onClick={handleClick}
         sx={{
           height: '100%',
           display: 'flex',
@@ -152,4 +156,4 @@ const BookCard: React.FC<BookCardProps> = ({ book, featured = false, index = 0 }
   );
 };
 
-export default BookCard;
+export default React.memo(BookCard);

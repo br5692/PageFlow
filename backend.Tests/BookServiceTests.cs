@@ -60,13 +60,16 @@ namespace backend.Tests
             using var context = new LibraryDbContext(_options);
             var service = new BookService(context);
 
-            // Act
+            // Act - avoid deconstruction and access tuple properties directly
             var result = await service.GetAllBooksAsync();
+            var books = result.Books;
+            var totalCount = result.TotalCount;
 
             // Assert
-            Assert.Equal(2, result.Count());
-            Assert.Contains(result, b => b.Title == "Test Book 1");
-            Assert.Contains(result, b => b.Title == "Test Book 2");
+            Assert.Equal(2, totalCount);
+            Assert.Equal(2, books.Count());
+            Assert.Contains(books, b => b.Title == "Test Book 1");
+            Assert.Contains(books, b => b.Title == "Test Book 2");
         }
 
         [Fact]
@@ -125,7 +128,7 @@ namespace backend.Tests
 
             await context.SaveChangesAsync();
 
-            // Act
+            // Act - avoid deconstruction
             var result = await service.SearchBooksAsync(
                 searchTerm: "Fantasy",
                 category: "Fantasy",
@@ -134,9 +137,13 @@ namespace backend.Tests
                 sortBy: "title",
                 ascending: true);
 
+            var books = result.Books;
+            var totalCount = result.TotalCount;
+
             // Assert
-            Assert.Single(result);
-            Assert.Equal("Fantasy Book", result.First().Title);
+            Assert.Equal(1, totalCount);
+            Assert.Single(books);
+            Assert.Equal("Fantasy Book", books.First().Title);
         }
 
         [Fact]
@@ -157,11 +164,14 @@ namespace backend.Tests
             }
             await context.SaveChangesAsync();
 
-            // Act
+            // Act - avoid deconstruction
             var result = await service.GetFeaturedBooksAsync(5);
+            var books = result.Books;
+            var totalCount = result.TotalCount;
 
             // Assert
-            Assert.Equal(5, result.Count());
+            Assert.Equal(5, books.Count());
+            Assert.True(totalCount >= 5);
         }
 
         [Fact]
@@ -353,23 +363,29 @@ namespace backend.Tests
             context.Books.Add(new Book { Title = "B Book", Author = "B Author" });
             await context.SaveChangesAsync();
 
-            // Act - Sort by title ascending
-            var resultAsc = await service.GetAllBooksAsync("title", true);
+            // Act - Sort by title ascending - avoid deconstruction
+            var resultAscObj = await service.GetAllBooksAsync("title", true);
+            var resultAsc = resultAscObj.Books;
+            var totalCountAsc = resultAscObj.TotalCount;
 
             // Assert
             var titles = resultAsc.Select(b => b.Title).ToList();
             var sortedTitles = titles.OrderBy(t => t).ToList();
             Assert.Equal(sortedTitles, titles); // Verify they're in alphabetical order
             Assert.Equal(3, titles.Count);
+            Assert.Equal(3, totalCountAsc);
 
-            // Act - Sort by title descending
-            var resultDesc = await service.GetAllBooksAsync("title", false);
+            // Act - Sort by title descending - avoid deconstruction
+            var resultDescObj = await service.GetAllBooksAsync("title", false);
+            var resultDesc = resultDescObj.Books;
+            var totalCountDesc = resultDescObj.TotalCount;
 
             // Assert
             titles = resultDesc.Select(b => b.Title).ToList();
             sortedTitles = titles.OrderByDescending(t => t).ToList();
             Assert.Equal(sortedTitles, titles); // Verify they're in reverse alphabetical order
             Assert.Equal("C Book", titles[0]); // The first book should be "C Book" when sorted desc
+            Assert.Equal(3, totalCountDesc);
         }
     }
 }

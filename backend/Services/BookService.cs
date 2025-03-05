@@ -11,11 +11,11 @@ public class BookService : IBookService
         _context = context;
     }
 
-    public async Task<IEnumerable<BookDto>> GetAllBooksAsync(string? sortBy = null, bool ascending = true)
+    public async Task<(IEnumerable<BookDto> Books, int TotalCount)> GetAllBooksAsync(string? sortBy = null, bool ascending = true, int page = 1, int pageSize = 20)
     {
         var query = _context.Books.AsQueryable();
 
-        // Apply sorting if specified
+        // Apply sorting
         if (!string.IsNullOrEmpty(sortBy))
         {
             query = sortBy.ToLower() switch
@@ -27,10 +27,33 @@ public class BookService : IBookService
             };
         }
 
-        return await query
-            .Include(b => b.Reviews)
-            .Select(b => MapToBookDto(b))
+        // Get total count before pagination
+        int totalCount = await query.CountAsync();
+
+        // Apply pagination
+        var paginatedQuery = query.Skip((page - 1) * pageSize).Take(pageSize);
+
+        // Optimize to avoid loading all reviews
+        var books = await paginatedQuery
+            .Select(b => new BookDto
+            {
+                Id = b.Id,
+                Title = b.Title,
+                Author = b.Author,
+                ISBN = b.ISBN,
+                PublishedDate = b.PublishedDate,
+                Description = b.Description,
+                CoverImage = b.CoverImage,
+                Publisher = b.Publisher,
+                Category = b.Category,
+                PageCount = b.PageCount,
+                IsAvailable = b.IsAvailable,
+                // Calculate average rating without loading all reviews
+                AverageRating = b.Reviews.Any() ? (decimal)b.Reviews.Average(r => r.Rating) : 0
+            })
             .ToListAsync();
+
+        return (books, totalCount);
     }
 
     public async Task<BookDto?> GetBookByIdAsync(int id)
@@ -42,14 +65,15 @@ public class BookService : IBookService
         return book != null ? MapToBookDto(book) : null;
     }
 
-    public async Task<IEnumerable<BookDto>> SearchBooksAsync(
-        string searchTerm,
-        string? category = null,
-        string? author = null,
-        bool? isAvailable = null,
-        string? sortBy = null,
-        bool ascending = true
-        )
+    public async Task<(IEnumerable<BookDto> Books, int TotalCount)> SearchBooksAsync(
+    string searchTerm,
+    string? category = null,
+    string? author = null,
+    bool? isAvailable = null,
+    string? sortBy = null,
+    bool ascending = true,
+    int page = 1,
+    int pageSize = 20)
     {
         var query = _context.Books.AsQueryable();
 
@@ -74,7 +98,7 @@ public class BookService : IBookService
             query = query.Where(b => b.IsAvailable == isAvailable.Value);
         }
 
-        // Apply sorting if specified
+        // Apply sorting
         if (!string.IsNullOrEmpty(sortBy))
         {
             query = sortBy.ToLower() switch
@@ -86,25 +110,44 @@ public class BookService : IBookService
             };
         }
 
-        return await query
-            .Include(b => b.Reviews)
-            .Select(b => MapToBookDto(b))
+        // Get total count before pagination
+        int totalCount = await query.CountAsync();
+
+        // Apply pagination
+        var paginatedQuery = query.Skip((page - 1) * pageSize).Take(pageSize);
+
+        // Optimize review loading
+        var books = await paginatedQuery
+            .Select(b => new BookDto
+            {
+                Id = b.Id,
+                Title = b.Title,
+                Author = b.Author,
+                ISBN = b.ISBN,
+                PublishedDate = b.PublishedDate,
+                Description = b.Description,
+                CoverImage = b.CoverImage,
+                Publisher = b.Publisher,
+                Category = b.Category,
+                PageCount = b.PageCount,
+                IsAvailable = b.IsAvailable,
+                AverageRating = b.Reviews.Any() ? (decimal)b.Reviews.Average(r => r.Rating) : 0
+            })
             .ToListAsync();
+
+        return (books, totalCount);
     }
 
-    public async Task<IEnumerable<BookDto>> GetFeaturedBooksAsync(
+    public async Task<(IEnumerable<BookDto> Books, int TotalCount)> GetFeaturedBooksAsync(
     int count,
     decimal minRating = 0,
     bool availableOnly = false)
     {
-        var query = _context.Books
-            .Include(b => b.Reviews)
-            .AsQueryable();
+        var query = _context.Books.AsQueryable();
 
         // Apply filters
         if (minRating > 0)
         {
-            // Fix the type mismatch with cast
             query = query.Where(b => b.Reviews.Any() &&
                 (decimal)b.Reviews.Average(r => r.Rating) >= minRating);
         }
@@ -114,14 +157,40 @@ public class BookService : IBookService
             query = query.Where(b => b.IsAvailable);
         }
 
-        // Use deterministic ordering for consistency
-        return await query
-            .OrderByDescending(b => b.Reviews.Count)
-            .ThenByDescending(b => b.Reviews.Any() ?
-                (decimal)b.Reviews.Average(r => r.Rating) : 0)
+        // Get total count
+        int totalCount = await query.CountAsync();
+
+        // More efficient random selection
+        int totalBooks = totalCount;
+        int skip = 0;
+
+        if (totalBooks > count)
+        {
+            // Only generate random offset if we have more books than requested
+            skip = new Random().Next(0, totalBooks - count);
+        }
+
+        var featuredBooks = await query
+            .Skip(skip)
             .Take(count)
-            .Select(b => MapToBookDto(b))
+            .Select(b => new BookDto
+            {
+                Id = b.Id,
+                Title = b.Title,
+                Author = b.Author,
+                ISBN = b.ISBN,
+                PublishedDate = b.PublishedDate,
+                Description = b.Description,
+                CoverImage = b.CoverImage,
+                Publisher = b.Publisher,
+                Category = b.Category,
+                PageCount = b.PageCount,
+                IsAvailable = b.IsAvailable,
+                AverageRating = b.Reviews.Any() ? (decimal)b.Reviews.Average(r => r.Rating) : 0
+            })
             .ToListAsync();
+
+        return (featuredBooks, totalCount);
     }
 
     public async Task<BookDto> CreateBookAsync(BookCreateDto bookDto)

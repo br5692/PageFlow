@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Box, Container, Typography, Divider } from '@mui/material';
 import HomeHero from '../components/home/HomeHero';
-import BookList from '../components/books/BookList';
 import FeaturedCategories from '../components/home/FeaturedCategories';
 import { useAuth } from '../context/AuthContext';
+import Loading from '../components/common/Loading';
+
+const BookList = lazy(() => import('../components/books/BookList'));
 
 const HomePage: React.FC = () => {
   const { isAuthenticated, isLibrarian } = useAuth();
@@ -44,13 +46,12 @@ const HomePage: React.FC = () => {
               }} 
             />
           </Box>
-          <BookList featured featuredCount={4} />
+          <Suspense fallback={<Loading />}>
+            <BookList featured featuredCount={4} />
+          </Suspense>
         </Box>
         
         <Divider sx={{ my: 6, borderColor: 'rgba(255,255,255,0.08)' }} />
-        
-        {/* Category Showcase */}
-        {/* <FeaturedCategories /> */}
         
         {isAuthenticated && !isLibrarian && (
           <>
@@ -86,12 +87,12 @@ const HomePage: React.FC = () => {
                   }} 
                 />
               </Box>
-              <BookList featuredCount={4} />
+              <Suspense fallback={<Loading />}>
+                <BookList featuredCount={4} />
+              </Suspense>
             </Box>
           </>
         )}
-        
-        {/* Removed Librarian Dashboard section as requested */}
       </Container>
     </Box>
   );

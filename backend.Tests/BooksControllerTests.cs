@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -35,8 +36,10 @@ namespace backend.Tests
                 new BookDto { Id = 1, Title = "Test Book 1", Author = "Test Author 1" },
                 new BookDto { Id = 2, Title = "Test Book 2", Author = "Test Author 2" }
             };
-            _mockBookService.Setup(x => x.GetAllBooksAsync(null, true))
-                .ReturnsAsync(books);
+
+            // Updated mock setup to match new signature
+            _mockBookService.Setup(x => x.GetAllBooksAsync(null, true, 1, 20))
+                .ReturnsAsync((books, books.Count));
 
             var controller = new BooksController(_mockBookService.Object, _mockReviewService.Object, _mockLogger.Object);
 
@@ -45,8 +48,21 @@ namespace backend.Tests
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result.Result);
-            var returnedBooks = Assert.IsAssignableFrom<IEnumerable<BookDto>>(okResult.Value);
+
+            // Extract the anonymous type properties using the actual anonymous type
+            var resultValue = okResult.Value;
+            Assert.NotNull(resultValue);
+
+            // Use reflection to access properties of the anonymous type
+            var dataProperty = resultValue.GetType().GetProperty("data");
+            Assert.NotNull(dataProperty);
+            var returnedBooks = Assert.IsAssignableFrom<IEnumerable<BookDto>>(dataProperty.GetValue(resultValue));
             Assert.Equal(2, returnedBooks.Count());
+
+            // Check other pagination properties
+            var totalCountProperty = resultValue.GetType().GetProperty("totalCount");
+            Assert.NotNull(totalCountProperty);
+            Assert.Equal(2, totalCountProperty.GetValue(resultValue));
         }
 
         [Fact]
@@ -81,7 +97,6 @@ namespace backend.Tests
             var result = await controller.GetBookById(999);
 
             // Assert
-            // Your controller returns NotFoundResult, not NotFoundObjectResult
             Assert.IsType<NotFoundResult>(result.Result);
         }
 
@@ -95,8 +110,9 @@ namespace backend.Tests
                 new BookDto { Id = 2, Title = "Book B", Author = "Author B" }
             };
 
-            _mockBookService.Setup(x => x.GetAllBooksAsync("title", true))
-                .ReturnsAsync(books);
+            // Updated mock setup to match new signature and return format
+            _mockBookService.Setup(x => x.GetAllBooksAsync("title", true, 1, 20))
+                .ReturnsAsync((books, books.Count));
 
             var controller = new BooksController(_mockBookService.Object, _mockReviewService.Object, _mockLogger.Object);
 
@@ -105,15 +121,24 @@ namespace backend.Tests
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result.Result);
-            var returnedBooks = Assert.IsAssignableFrom<IEnumerable<BookDto>>(okResult.Value);
+
+            // Extract the anonymous type properties using reflection
+            var resultValue = okResult.Value;
+            var dataProperty = resultValue.GetType().GetProperty("data");
+            Assert.NotNull(dataProperty);
+            var returnedBooks = Assert.IsAssignableFrom<IEnumerable<BookDto>>(dataProperty.GetValue(resultValue));
             Assert.Equal(2, returnedBooks.Count());
+
+            var totalCountProperty = resultValue.GetType().GetProperty("totalCount");
+            Assert.NotNull(totalCountProperty);
+            Assert.Equal(2, totalCountProperty.GetValue(resultValue));
         }
 
         [Fact]
         public async Task GetAllBooks_ThrowsException_ReturnsServerError()
         {
             // Arrange
-            _mockBookService.Setup(x => x.GetAllBooksAsync(null, true))
+            _mockBookService.Setup(x => x.GetAllBooksAsync(null, true, 1, 20))
                 .ThrowsAsync(new Exception("Test exception"));
 
             var controller = new BooksController(_mockBookService.Object, _mockReviewService.Object, _mockLogger.Object);
@@ -136,9 +161,9 @@ namespace backend.Tests
                 new BookDto { Id = 2, Title = "Featured Book 2", Author = "Author 2" }
             };
 
-            // Update the setup to match the new signature with default values
+            // Update the setup to match the new signature with tuple return
             _mockBookService.Setup(x => x.GetFeaturedBooksAsync(5, 0, false))
-                .ReturnsAsync(books);
+                .ReturnsAsync((books, books.Count));
 
             var controller = new BooksController(_mockBookService.Object, _mockReviewService.Object, _mockLogger.Object);
 
@@ -147,7 +172,12 @@ namespace backend.Tests
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result.Result);
-            var returnedBooks = Assert.IsAssignableFrom<IEnumerable<BookDto>>(okResult.Value);
+            var resultValue = okResult.Value;
+
+            // Use reflection to access properties
+            var dataProperty = resultValue.GetType().GetProperty("data");
+            Assert.NotNull(dataProperty);
+            var returnedBooks = Assert.IsAssignableFrom<IEnumerable<BookDto>>(dataProperty.GetValue(resultValue));
             Assert.Equal(2, returnedBooks.Count());
         }
 
@@ -160,8 +190,9 @@ namespace backend.Tests
                 new BookDto { Id = 1, Title = "Search Result 1", Author = "Author 1", Category = "Fiction" },
             };
 
-            _mockBookService.Setup(x => x.SearchBooksAsync("search", "Fiction", "Author 1", true, "title", true))
-                .ReturnsAsync(books);
+            // Updated mock setup to match new signature with pagination parameters
+            _mockBookService.Setup(x => x.SearchBooksAsync("search", "Fiction", "Author 1", true, "title", true, 1, 20))
+                .ReturnsAsync((books, books.Count));
 
             var controller = new BooksController(_mockBookService.Object, _mockReviewService.Object, _mockLogger.Object);
 
@@ -170,7 +201,12 @@ namespace backend.Tests
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result.Result);
-            var returnedBooks = Assert.IsAssignableFrom<IEnumerable<BookDto>>(okResult.Value);
+            var resultValue = okResult.Value;
+
+            // Use reflection to get data property
+            var dataProperty = resultValue.GetType().GetProperty("data");
+            Assert.NotNull(dataProperty);
+            var returnedBooks = Assert.IsAssignableFrom<IEnumerable<BookDto>>(dataProperty.GetValue(resultValue));
             Assert.Single(returnedBooks);
         }
 

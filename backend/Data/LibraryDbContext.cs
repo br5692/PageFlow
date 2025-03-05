@@ -36,10 +36,23 @@ namespace backend.Data
                 .WithMany(b => b.Reviews)
                 .HasForeignKey(r => r.BookId);
 
+            // Add indexes for commonly queried columns
             modelBuilder.Entity<Review>()
                 .HasOne(r => r.LibraryUser)
                 .WithMany()
                 .HasForeignKey(r => r.LibraryUserId);
+
+            modelBuilder.Entity<Book>()
+                .HasIndex(b => b.Title);
+
+            modelBuilder.Entity<Book>()
+                .HasIndex(b => b.Author);
+
+            modelBuilder.Entity<Book>()
+                .HasIndex(b => b.Category);
+
+            modelBuilder.Entity<Book>()
+                .HasIndex(b => b.IsAvailable);
         }
     }
 }
