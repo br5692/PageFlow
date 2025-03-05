@@ -79,7 +79,7 @@ namespace backend.Services
             var checkouts = await _context.Checkouts
                 .Include(c => c.Book)
                 .Include(c => c.LibraryUser)
-                .Where(c => c.LibraryUserId == userId)
+                .Where(c => c.LibraryUserId == userId && !c.ReturnDate.HasValue)
                 .ToListAsync();
 
             return checkouts.Select(MapToCheckoutDto);
