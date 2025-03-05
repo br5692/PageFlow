@@ -5,23 +5,52 @@ import { BookDto } from '../../types/book.types';
 
 interface BookCardProps {
   book: BookDto;
+  featured?: boolean;
 }
 
-const BookCard: React.FC<BookCardProps> = ({ book }) => {
+const BookCard: React.FC<BookCardProps> = ({ book, featured = false }) => {
   const navigate = useNavigate();
 
   return (
-    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Card sx={{ 
+      height: '100%', 
+      display: 'flex', 
+      flexDirection: 'column',
+      // Conditionally add styles for featured books, but avoid nested selectors
+      ...(featured ? {
+        borderRadius: '8px',
+        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+        '&:hover': {
+          transform: 'translateY(-8px)',
+          boxShadow: 6 // Use a number instead of theme.shadows
+        }
+      } : {})
+    }}>
       <CardActionArea onClick={() => navigate(`/books/${book.id}`)}>
         <CardMedia
           component="img"
-          height="200"
+          height={featured ? "220" : "200"}
           image={book.coverImage || 'https://via.placeholder.com/300x450?text=No+Cover'}
           alt={`Cover of ${book.title}`}
-          sx={{ objectFit: 'contain', p: 1 }}
+          sx={{ 
+            objectFit: 'contain', 
+            p: 1,
+            ...(featured ? {
+              transition: 'transform 0.3s ease',
+              '&:hover': {
+                transform: 'scale(1.05)'
+              }
+            } : {})
+          }}
         />
         <CardContent sx={{ flexGrow: 1 }}>
-          <Typography gutterBottom variant="h6" component="div" noWrap>
+          <Typography 
+            gutterBottom 
+            variant="h6" 
+            component="div" 
+            noWrap
+            sx={featured ? { fontWeight: 500 } : {}}
+          >
             {book.title}
           </Typography>
           <Typography variant="body2" color="text.secondary" gutterBottom>

@@ -199,7 +199,6 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
               />
             </Grid>
             
-            {/* Rest of the UI components remain unchanged */}
             <Grid item xs={12} sm={6} md={2}>
               <FormControl fullWidth>
                 <InputLabel id="category-label">Category</InputLabel>
@@ -285,10 +284,24 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
           No books found. Try adjusting your search criteria.
         </Typography>
       ) : (
-        <Grid container spacing={3}>
+        <Grid 
+          container 
+          spacing={3}
+        >
           {books.map((book) => (
-            <Grid item key={book.id} xs={12} sm={6} md={4} lg={3}>
-              <BookCard book={book} />
+            <Grid 
+              item 
+              key={book.id} 
+              xs={12} 
+              sm={6} 
+              md={featured ? 3 : 4} 
+              lg={featured ? 3 : 3}
+              sx={{ transition: 'all 0.3s ease' }}
+            >
+              <BookCard 
+                book={book} 
+                featured={featured}
+              />
             </Grid>
           ))}
         </Grid>
