@@ -41,6 +41,32 @@ export const bookService = {
     
     return formattedResponse;
   },
+
+  getQuickBooks: async (): Promise<{
+    books: BookDto[], 
+    totalCount: number,
+    categories: string[],
+    authors: string[]
+  }> => {
+    const cacheKey = 'quick-books';
+    const now = Date.now();
+    
+    // Use cached data if available
+    if (bookCache[cacheKey] && (now - bookCache[cacheKey].timestamp < CACHE_DURATION)) {
+      return bookCache[cacheKey].data;
+    }
+    
+    // Fetch quick books data
+    const response = await api.get<any>('/Books/quick');
+    
+    // Cache the result
+    bookCache[cacheKey] = {
+      data: response.data,
+      timestamp: now
+    };
+    
+    return response.data;
+  },
   
   searchBooks: async (
     params: BookFilterParams & { page?: number, pageSize?: number }

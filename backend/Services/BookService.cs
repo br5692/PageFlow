@@ -254,6 +254,29 @@ public class BookService : IBookService
         return book?.IsAvailable ?? false;
     }
 
+    public async Task<IEnumerable<string>> GetTopCategoriesAsync(int count)
+    {
+        return await _context.Books
+            .AsNoTracking()
+            .Where(b => b.Category != null)
+            .GroupBy(b => b.Category)
+            .OrderByDescending(g => g.Count())
+            .Take(count)
+            .Select(g => g.Key)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<string>> GetTopAuthorsAsync(int count)
+    {
+        return await _context.Books
+            .AsNoTracking()
+            .GroupBy(b => b.Author)
+            .OrderByDescending(g => g.Count())
+            .Take(count)
+            .Select(g => g.Key)
+            .ToListAsync();
+    }
+
     private static BookDto MapToBookDto(Book book)
     {
         return new BookDto

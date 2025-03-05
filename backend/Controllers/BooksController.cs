@@ -225,5 +225,39 @@ namespace backend.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
+
+        [HttpGet("quick")]
+        public async Task<ActionResult<object>> GetQuickBooks(
+            [FromQuery] string? sortBy = null,
+            [FromQuery] bool ascending = true)
+        {
+            try
+            {
+                _logger.LogInformation("Getting quick books view");
+
+                // Get only total count - fast query
+                var totalCount = await _bookService.GetBooksCountAsync();
+
+                // Get just the first 10 books for immediate display
+                var books = await _bookService.GetAllBooksAsync(sortBy, ascending, 1, 10);
+
+                // Get a sample of categories and authors for filters (top 20 most common)
+                var categories = await _bookService.GetTopCategoriesAsync(20);
+                var authors = await _bookService.GetTopAuthorsAsync(20);
+
+                return Ok(new
+                {
+                    books,
+                    totalCount,
+                    categories,
+                    authors
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting quick books view: {Message}", ex.Message);
+                return StatusCode(500, "Internal server error");
+            }
+        }
     }
 }

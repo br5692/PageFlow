@@ -1,22 +1,23 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Grid,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Box,
-  Typography,
-  SelectChangeEvent,
-  FormControlLabel,
-  Checkbox,
-  InputAdornment,
-  IconButton,
-  useTheme,
-  Pagination,
-  Stack
-} from '@mui/material';
+    Grid,
+    TextField,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+    Box,
+    Typography,
+    SelectChangeEvent,
+    FormControlLabel,
+    Checkbox,
+    InputAdornment,
+    IconButton,
+    useTheme,
+    Pagination,
+    Stack,
+    Paper
+  } from '@mui/material';
 import { Search, Clear } from '@mui/icons-material';
 import debounce from 'lodash/debounce';
 import { BookDto, BookFilterParams } from '../../types/book.types';
@@ -78,79 +79,77 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
   }, [featured]);
 
   useEffect(() => {
+    // For tracking load time
+    const startTime = performance.now();
+    
+    // Flag to track first render
+    const isFirstLoad = page === 1 && !searchParams.query && !searchParams.category && !searchParams.author;
+    
     const fetchBooks = async () => {
-      setLoading(true);
-      if (searchInputRef.current === document.activeElement) {
-        setSearchWasActive(true);
-      }
-      
-      try {
-        if (featured) {
-          // Featured books endpoint with server-side filtering
-          const featuredBooks = await bookService.getFeaturedBooks(featuredCount, 4.0, true);
-          setBooks(featuredBooks);
-          setTotalItems(featuredBooks.length);
-        } else if (searchParams.query || searchParams.category || searchParams.author || searchParams.isAvailable !== undefined) {
-          // Search with pagination
-          const response = await bookService.searchBooks({
-            ...searchParams,
-            page: page,
-            pageSize: pageSize
-          });
-          
-          // Handle both API response formats (array or object with books/totalCount)
-          if (Array.isArray(response)) {
-            setBooks(response);
-            setTotalItems(response.length);
-          } else {
-            setBooks(response.books);
-            setTotalItems(response.totalCount);
+        const isFirstLoad = page === 1 && !searchParams.query && !searchParams.category && !searchParams.author;
+        
+        if (isFirstLoad) {
+          setLoading(true);
+          try {
+            // Use the quick load method for first render
+            const quickData = await bookService.getQuickBooks();
+            
+            // Immediately display the first books
+            setBooks(quickData.books);
+            setTotalItems(quickData.totalCount);
+            
+            // Set filter options from the quick load
+            setAllCategories(quickData.categories);
+            setAllAuthors(quickData.authors);
+            
+            // Then silently load the actual first page in the background
+            setTimeout(() => {
+              bookService.getAllBooks(
+                searchParams.sortBy,
+                searchParams.ascending,
+                page,
+                pageSize
+              ).then(response => {
+                setBooks(response.books);
+              });
+            }, 100);
+          } catch (error) {
+            console.error('Failed to load books:', error);
+            showAlert('error', 'Failed to load books');
+          } finally {
+            setLoading(false);
           }
         } else {
-          // Get all books with pagination
-          const response = await bookService.getAllBooks(
-            searchParams.sortBy, 
-            searchParams.ascending, 
-            page, 
-            pageSize
-          );
-          
-          // Handle both API response formats
-          if (Array.isArray(response)) {
-            setBooks(response);
-            setTotalItems(response.length);
-          } else {
+          // Regular pagination loading
+          setLoadingMoreBooks(true);
+          try {
+            const response = await bookService.getAllBooks(
+              searchParams.sortBy,
+              searchParams.ascending,
+              page,
+              pageSize
+            );
+            
             setBooks(response.books);
             setTotalItems(response.totalCount);
+          } catch (error) {
+            console.error('Failed to load books:', error);
+            showAlert('error', 'Failed to load books');
+          } finally {
+            setLoadingMoreBooks(false);
           }
         }
-        
-        // Only update categories and authors when not in featured mode
-        if (!featured && books.length > 0) {
-          const uniqueCategories = [...new Set(books.map(book => book.category).filter(Boolean))];
-          const uniqueAuthors = [...new Set(books.map(book => book.author))];
-          
-          setCategories(uniqueCategories as string[]);
-          setAuthors(uniqueAuthors);
-        }
-      } catch (error) {
-        console.error('Failed to load books:', error);
-        showAlert('error', 'Failed to load books');
-      } finally {
-        setLoading(false);
-        setLoadingMoreBooks(false);
-      }
-    };
-
+      };
+  
     fetchBooks();
   }, [featured, featuredCount, searchParams, showAlert, page, pageSize]);
 
-  useEffect(() => {
-    if (!loading && searchWasActive && searchInputRef.current) {
-      searchInputRef.current.focus();
-      setSearchWasActive(false);
-    }
-  }, [loading, searchWasActive]);
+    useEffect(() => {
+        if (!loading && searchWasActive && searchInputRef.current) {
+        searchInputRef.current.focus();
+        setSearchWasActive(false);
+        }
+    }, [loading, searchWasActive]);
 
   const debouncedSearch = useCallback(
     debounce((value: string) => {
@@ -208,7 +207,20 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
   };
 
   if (loading) {
-    return <Loading />;
+    return (
+      <Grid container spacing={3}>
+        {[...Array(6)].map((_, index) => (
+          <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
+            <Paper sx={{ p: 2, height: '320px' }}>
+              <Box sx={{ width: '100%', height: '180px', bgcolor: 'grey.300', mb: 2 }} />
+              <Box sx={{ width: '80%', height: '24px', bgcolor: 'grey.300', mb: 1 }} />
+              <Box sx={{ width: '50%', height: '18px', bgcolor: 'grey.300', mb: 1 }} />
+              <Box sx={{ width: '100%', height: '60px', bgcolor: 'grey.300', mb: 1 }} />
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
+    );
   }
 
   return (

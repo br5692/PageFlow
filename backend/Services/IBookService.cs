@@ -27,4 +27,6 @@ public interface IBookService
     Task<BookDto?> UpdateBookAsync(BookUpdateDto bookDto);
     Task<bool> DeleteBookAsync(int id);
     Task<bool> IsBookAvailableAsync(int bookId);
+    Task<IEnumerable<string>> GetTopCategoriesAsync(int count);
+    Task<IEnumerable<string>> GetTopAuthorsAsync(int count);
 }
