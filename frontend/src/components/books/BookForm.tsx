@@ -96,29 +96,32 @@ const BookForm: React.FC<BookFormProps> = ({ isEdit = false }) => {
 
   useEffect(() => {
     const fetchBookCategories = async () => {
-      try {
-        const books = await bookService.getAllBooks();
-        const uniqueCategories = [...new Set(books
-          .map(book => book.category)
-          .filter(Boolean)
-        )];
-        
-        // Add some standard categories if they're not in the list
-        const standardCategories = [
-          'Fiction', 'Non-Fiction', 'Science Fiction', 'Fantasy', 
-          'Mystery', 'Thriller', 'Romance', 'Biography', 
-          'History', 'Science', 'Technology', 'Self-Help'
-        ];
-        
-        const allCategories = Array.from(
-          new Set([...uniqueCategories, ...standardCategories])
-        ).sort();
-        
-        setCategories(allCategories as string[]);
-      } catch (error) {
-        console.error('Failed to fetch categories:', error);
-      }
-    };
+        try {
+          const response = await bookService.getAllBooks();
+          // Extract books from the response, handling both formats
+          const books = Array.isArray(response) ? response : response.books;
+          
+          const uniqueCategories = [...new Set(books
+            .map(book => book.category)
+            .filter(Boolean)
+          )];
+          
+          // Add some standard categories if they're not in the list
+          const standardCategories = [
+            'Fiction', 'Non-Fiction', 'Science Fiction', 'Fantasy', 
+            'Mystery', 'Thriller', 'Romance', 'Biography', 
+            'History', 'Science', 'Technology', 'Self-Help'
+          ];
+          
+          const allCategories = Array.from(
+            new Set([...uniqueCategories, ...standardCategories])
+          ).sort();
+          
+          setCategories(allCategories as string[]);
+        } catch (error) {
+          console.error('Failed to fetch categories:', error);
+        }
+      };
 
     fetchBookCategories();
   }, []);

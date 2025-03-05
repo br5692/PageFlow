@@ -13,7 +13,9 @@ import {
   Checkbox,
   InputAdornment,
   IconButton,
-  useTheme
+  useTheme,
+  Pagination,
+  Stack
 } from '@mui/material';
 import { Search, Clear } from '@mui/icons-material';
 import debounce from 'lodash/debounce';
@@ -41,6 +43,12 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
     ascending: true,
   });
   
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12); // 12 looks good in grid
+  const [totalItems, setTotalItems] = useState(0);
+  const [loadingMoreBooks, setLoadingMoreBooks] = useState(false);
+  
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const [allAuthors, setAllAuthors] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -55,17 +63,15 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
   useEffect(() => {
     const fetchAllOptions = async () => {
       try {
-        const allBooks = await bookService.getAllBooks();
-        const uniqueCategories = [...new Set(allBooks.map(book => book.category).filter(Boolean))];
-        const uniqueAuthors = [...new Set(allBooks.map(book => book.author))];
-        
-        setAllCategories(uniqueCategories as string[]);
-        setAllAuthors(uniqueAuthors);
+        // Use the new cached filter options endpoint
+        const { categories, authors } = await bookService.getFilterOptions();
+        setAllCategories(categories);
+        setAllAuthors(authors);
       } catch (error) {
         console.error('Failed to load filter options:', error);
       }
     };
-
+  
     if (!featured) {
       fetchAllOptions();
     }
@@ -79,38 +85,65 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
       }
       
       try {
-        let fetchedBooks: BookDto[];
-        
         if (featured) {
-          fetchedBooks = await bookService.getFeaturedBooks(featuredCount);
-        // Filter to only show books with 4+ stars and available status
-        //   fetchedBooks = fetchedBooks.filter(book => 
-        //     book.averageRating >= 4.0 && book.isAvailable
-        //   );
+          // Featured books endpoint with server-side filtering
+          const featuredBooks = await bookService.getFeaturedBooks(featuredCount, 4.0, true);
+          setBooks(featuredBooks);
+          setTotalItems(featuredBooks.length);
         } else if (searchParams.query || searchParams.category || searchParams.author || searchParams.isAvailable !== undefined) {
-          fetchedBooks = await bookService.searchBooks(searchParams);
+          // Search with pagination
+          const response = await bookService.searchBooks({
+            ...searchParams,
+            page: page,
+            pageSize: pageSize
+          });
+          
+          // Handle both API response formats (array or object with books/totalCount)
+          if (Array.isArray(response)) {
+            setBooks(response);
+            setTotalItems(response.length);
+          } else {
+            setBooks(response.books);
+            setTotalItems(response.totalCount);
+          }
         } else {
-          fetchedBooks = await bookService.getAllBooks(searchParams.sortBy, searchParams.ascending);
+          // Get all books with pagination
+          const response = await bookService.getAllBooks(
+            searchParams.sortBy, 
+            searchParams.ascending, 
+            page, 
+            pageSize
+          );
+          
+          // Handle both API response formats
+          if (Array.isArray(response)) {
+            setBooks(response);
+            setTotalItems(response.length);
+          } else {
+            setBooks(response.books);
+            setTotalItems(response.totalCount);
+          }
         }
         
-        setBooks(fetchedBooks);
-        
-        if (!featured) {
-          const uniqueCategories = [...new Set(fetchedBooks.map(book => book.category).filter(Boolean))];
-          const uniqueAuthors = [...new Set(fetchedBooks.map(book => book.author))];
+        // Only update categories and authors when not in featured mode
+        if (!featured && books.length > 0) {
+          const uniqueCategories = [...new Set(books.map(book => book.category).filter(Boolean))];
+          const uniqueAuthors = [...new Set(books.map(book => book.author))];
           
           setCategories(uniqueCategories as string[]);
           setAuthors(uniqueAuthors);
         }
       } catch (error) {
+        console.error('Failed to load books:', error);
         showAlert('error', 'Failed to load books');
       } finally {
         setLoading(false);
+        setLoadingMoreBooks(false);
       }
     };
 
     fetchBooks();
-  }, [featured, featuredCount, searchParams, showAlert]);
+  }, [featured, featuredCount, searchParams, showAlert, page, pageSize]);
 
   useEffect(() => {
     if (!loading && searchWasActive && searchInputRef.current) {
@@ -122,6 +155,7 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
   const debouncedSearch = useCallback(
     debounce((value: string) => {
       setSearchParams(prev => ({ ...prev, query: value }));
+      setPage(1); // Reset to first page on new search
     }, 300),
     []
   );
@@ -135,6 +169,7 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
   const handleClearSearch = () => {
     setSearchText('');
     setSearchParams(prev => ({ ...prev, query: '' }));
+    setPage(1); // Reset to first page when clearing search
     if (searchInputRef.current) {
       searchInputRef.current.focus();
     }
@@ -142,22 +177,34 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
 
   const handleSortChange = (event: SelectChangeEvent) => {
     setSearchParams({ ...searchParams, sortBy: event.target.value });
+    setPage(1); // Reset to first page on sort change
   };
 
   const handleSortDirectionChange = () => {
     setSearchParams({ ...searchParams, ascending: !searchParams.ascending });
+    setPage(1); // Reset to first page on sort direction change
   };
 
   const handleCategoryChange = (event: SelectChangeEvent) => {
     setSearchParams({ ...searchParams, category: event.target.value || undefined });
+    setPage(1); // Reset to first page on category change
   };
 
   const handleAuthorChange = (event: SelectChangeEvent) => {
     setSearchParams({ ...searchParams, author: event.target.value || undefined });
+    setPage(1); // Reset to first page on author change
   };
 
   const handleAvailabilityChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchParams({ ...searchParams, isAvailable: event.target.checked ? true : undefined });
+    setPage(1); // Reset to first page on availability change
+  };
+
+  const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
+    setLoadingMoreBooks(true);
+    setPage(value);
+    // Scroll to top when changing page for better UX
+    window.scrollTo(0, 0);
   };
 
   if (loading) {
@@ -290,28 +337,55 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 1
             : "No books found. Try adjusting your search criteria."}
         </Typography>
       ) : (
-        <Grid 
-          container 
-          spacing={3}
-        >
-          {books.map((book, index) => (
+        <>
+          <Grid 
+            container 
+            spacing={3}
+          >
+            {books.map((book: BookDto, index: number) => (
             <Grid 
-              item 
-              key={book.id} 
-              xs={12} 
-              sm={6} 
-              md={featured ? 3 : 4} 
-              lg={featured ? 3 : 3}
-              sx={{ transition: 'all 0.3s ease' }}
+                item 
+                key={book.id} 
+                xs={12} 
+                sm={6} 
+                md={featured ? 3 : 4} 
+                lg={featured ? 3 : 3}
+                sx={{ transition: 'all 0.3s ease' }}
             >
-              <BookCard 
+                <BookCard 
                 book={book} 
                 featured={featured}
                 index={index}
-              />
+                />
             </Grid>
-          ))}
-        </Grid>
+            ))}
+          </Grid>
+          
+          {/* Pagination - only show for non-featured views with enough items */}
+          {!featured && totalItems > pageSize && (
+            <Stack spacing={2} sx={{ mt: 4, display: 'flex', alignItems: 'center' }}>
+                <Pagination 
+                count={Math.ceil(totalItems / pageSize)} 
+                page={page} 
+                onChange={handlePageChange}
+                color="primary"
+                size="large"
+                showFirstButton
+                showLastButton
+                disabled={loadingMoreBooks}
+                />
+                {loadingMoreBooks ? (
+                <Typography variant="body2" color="text.secondary">
+                    Loading...
+                </Typography>
+                ) : (
+                <Typography variant="body2" color="text.secondary">
+                    Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, totalItems)} of {totalItems} books
+                </Typography>
+                )}
+            </Stack>
+            )}
+        </>
       )}
     </>
   );

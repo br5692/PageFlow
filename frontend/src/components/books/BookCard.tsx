@@ -44,6 +44,7 @@ const BookCard: React.FC<BookCardProps> = ({ book, featured = false, index = 0 }
             height={featured ? "380" : "320"}
             image={book.coverImage || 'https://via.placeholder.com/300x450?text=No+Cover'}
             alt={`Cover of ${book.title}`}
+            loading="lazy"
             sx={{ 
               objectFit: 'cover',
               transition: 'transform 0.8s ease',
@@ -152,4 +153,4 @@ const BookCard: React.FC<BookCardProps> = ({ book, featured = false, index = 0 }
   );
 };
 
-export default BookCard;
+export default React.memo(BookCard);

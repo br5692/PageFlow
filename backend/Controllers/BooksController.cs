@@ -25,20 +25,67 @@ namespace backend.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<BookDto>>> GetAllBooks(
+        public async Task<ActionResult<object>> GetAllBooks(
             [FromQuery] string? sortBy = null,
-            [FromQuery] bool ascending = true
+            [FromQuery] bool ascending = true,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10
             )
         {
             try
             {
-                _logger.LogInformation("Getting all books");
-                var books = await _bookService.GetAllBooksAsync(sortBy, ascending);
-                return Ok(books);
+                _logger.LogInformation("Getting books page {Page}, size {PageSize}", page, pageSize);
+
+                // Get total count
+                var totalCount = await _bookService.GetBooksCountAsync();
+
+                // Get paginated books
+                var books = await _bookService.GetAllBooksAsync(sortBy, ascending, page, pageSize);
+
+                return Ok(new
+                {
+                    books,
+                    totalCount
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting all books: {Message}", ex.Message);
+                _logger.LogError(ex, "Error getting books: {Message}", ex.Message);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [HttpGet("search")]
+        public async Task<ActionResult<object>> SearchBooks(
+            [FromQuery] string query = "",
+            [FromQuery] string? category = null,
+            [FromQuery] string? author = null,
+            [FromQuery] bool? isAvailable = null,
+            [FromQuery] string? sortBy = null,
+            [FromQuery] bool ascending = true,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10
+            )
+        {
+            try
+            {
+                // Get total count
+                var totalCount = await _bookService.GetSearchBooksCountAsync(
+                    query, category, author, isAvailable);
+
+                // Get paginated search results
+                var books = await _bookService.SearchBooksAsync(
+                    query, category, author, isAvailable, sortBy, ascending, page, pageSize);
+
+                return Ok(new
+                {
+                    books,
+                    totalCount
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching books with query: {Query}", query);
                 return StatusCode(500, "Internal server error");
             }
         }
@@ -62,28 +109,28 @@ namespace backend.Controllers
             }
         }
 
-        [HttpGet("search")]
-        public async Task<ActionResult<IEnumerable<BookDto>>> SearchBooks(
-            [FromQuery] string query = "",
-            [FromQuery] string? category = null,
-            [FromQuery] string? author = null,
-            [FromQuery] bool? isAvailable = null,
-            [FromQuery] string? sortBy = null,
-            [FromQuery] bool ascending = true
-            )
-        {
-            try
-            {
-                var books = await _bookService.SearchBooksAsync(
-                    query, category, author, isAvailable, sortBy, ascending);
-                return Ok(books);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error searching books with query: {Query}", query);
-                return StatusCode(500, "Internal server error");
-            }
-        }
+        //[HttpGet("search")]
+        //public async Task<ActionResult<IEnumerable<BookDto>>> SearchBooks(
+        //    [FromQuery] string query = "",
+        //    [FromQuery] string? category = null,
+        //    [FromQuery] string? author = null,
+        //    [FromQuery] bool? isAvailable = null,
+        //    [FromQuery] string? sortBy = null,
+        //    [FromQuery] bool ascending = true
+        //    )
+        //{
+        //    try
+        //    {
+        //        var books = await _bookService.SearchBooksAsync(
+        //            query, category, author, isAvailable, sortBy, ascending);
+        //        return Ok(books);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error searching books with query: {Query}", query);
+        //        return StatusCode(500, "Internal server error");
+        //    }
+        //}
 
         [HttpGet("{id}")]
         public async Task<ActionResult<BookDto>> GetBookById(int id)

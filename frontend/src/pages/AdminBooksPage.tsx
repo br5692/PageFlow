@@ -17,7 +17,9 @@ import {
   InputAdornment,
   Skeleton,
   Alert,
-  useTheme
+  useTheme,
+  Pagination,
+  Stack
 } from '@mui/material';
 import { 
   Add, 
@@ -32,7 +34,6 @@ import { useNavigate } from 'react-router-dom';
 import { BookDto } from '../types/book.types';
 import { bookService } from '../services/bookService';
 import { useAlert } from '../context/AlertContext';
-import PageTitle from '../components/common/PageTitle';
 
 const AdminBooksPage: React.FC = () => {
   const navigate = useNavigate();
@@ -45,14 +46,23 @@ const AdminBooksPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingBookId, setDeletingBookId] = useState<number | null>(null);
+  
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20); // 20 is good for tables
+  const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
     const fetchBooks = async () => {
       try {
         setLoading(true);
-        const data = await bookService.getAllBooks();
-        setBooks(data);
-        setFilteredBooks(data);
+        const response = await bookService.getAllBooks(undefined, true, page, pageSize);
+        
+        // Extract books array from response
+        setBooks(response.books);
+        setFilteredBooks(response.books);
+        setTotalItems(response.totalCount);
+        
         setError(null);
       } catch (error: any) {
         console.error('Failed to load books:', error);
@@ -62,10 +72,11 @@ const AdminBooksPage: React.FC = () => {
         setLoading(false);
       }
     };
-
+  
     fetchBooks();
-  }, [showAlert]);
+  }, [showAlert, page, pageSize]);
 
+  // We'll keep client-side filtering for quick search within the current page
   useEffect(() => {
     if (searchTerm.trim() === '') {
       setFilteredBooks(books);
@@ -98,9 +109,20 @@ const AdminBooksPage: React.FC = () => {
       try {
         setDeletingBookId(id);
         await bookService.deleteBook(id);
+        
+        // Remove the deleted book from current page view
         setBooks(books.filter(book => book.id !== id));
         setFilteredBooks(filteredBooks.filter(book => book.id !== id));
+        
+        // Update total count
+        setTotalItems(prevTotal => prevTotal - 1);
+        
         showAlert('success', 'Book deleted successfully');
+        
+        // If page is now empty and not the first page, go back one page
+        if (filteredBooks.length === 1 && page > 1) {
+          setPage(page - 1);
+        }
       } catch (error: any) {
         showAlert('error', error.response?.data?.message || 'Failed to delete book');
       } finally {
@@ -115,6 +137,12 @@ const AdminBooksPage: React.FC = () => {
 
   const clearSearch = () => {
     setSearchTerm('');
+  };
+  
+  const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
+    setPage(value);
+    // Scroll to top when changing page for better UX
+    window.scrollTo(0, 0);
   };
 
   if (loading) {
@@ -207,7 +235,7 @@ const AdminBooksPage: React.FC = () => {
           <TextField
             variant="outlined"
             size="small"
-            placeholder="Search by title, author or category..."
+            placeholder="Search books on this page..."
             fullWidth
             value={searchTerm}
             onChange={handleSearchChange}
@@ -265,81 +293,99 @@ const AdminBooksPage: React.FC = () => {
           )}
         </Paper>
       ) : (
-        <TableContainer component={Paper} sx={{ bgcolor: 'background.paper' }}>
-          <Table>
-            <TableHead sx={{ bgcolor: 'background.default' }}>
-              <TableRow>
-                <TableCell sx={{ color: 'text.secondary' }}>ID</TableCell>
-                <TableCell sx={{ color: 'text.secondary' }}>Title</TableCell>
-                <TableCell sx={{ color: 'text.secondary' }}>Author</TableCell>
-                <TableCell sx={{ color: 'text.secondary' }}>Category</TableCell>
-                <TableCell sx={{ color: 'text.secondary' }}>Status</TableCell>
-                <TableCell align="right" sx={{ color: 'text.secondary' }}>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredBooks.map((book) => (
-                <TableRow key={book.id} hover>
-                  <TableCell sx={{ color: 'text.primary' }}>{book.id}</TableCell>
-                  <TableCell>
-                    <Typography 
-                      sx={{ 
-                        fontWeight: 'medium',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        maxWidth: '300px',
-                        color: 'text.primary'
-                      }}
-                    >
-                      {book.title}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ color: 'text.primary' }}>{book.author}</TableCell>
-                  <TableCell sx={{ color: 'text.primary' }}>{book.category || '—'}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={book.isAvailable ? 'Available' : 'Checked Out'}
-                      color={book.isAvailable ? 'success' : 'error'}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <Tooltip title="View Book">
-                        <IconButton
-                          color="primary"
-                          onClick={() => handleViewBook(book.id)}
-                          size="small"
-                        >
-                          <Visibility />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Edit Book">
-                        <IconButton
-                          color="primary"
-                          onClick={() => handleEditBook(book.id)}
-                          size="small"
-                        >
-                          <Edit />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete Book">
-                        <IconButton
-                          color="error"
-                          onClick={() => handleDeleteBook(book.id)}
-                          size="small"
-                          disabled={deletingBookId === book.id}
-                        >
-                          <Delete />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </TableCell>
+        <>
+          <TableContainer component={Paper} sx={{ bgcolor: 'background.paper' }}>
+            <Table>
+              <TableHead sx={{ bgcolor: 'background.default' }}>
+                <TableRow>
+                  <TableCell sx={{ color: 'text.secondary' }}>ID</TableCell>
+                  <TableCell sx={{ color: 'text.secondary' }}>Title</TableCell>
+                  <TableCell sx={{ color: 'text.secondary' }}>Author</TableCell>
+                  <TableCell sx={{ color: 'text.secondary' }}>Category</TableCell>
+                  <TableCell sx={{ color: 'text.secondary' }}>Status</TableCell>
+                  <TableCell align="right" sx={{ color: 'text.secondary' }}>Actions</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </TableHead>
+              <TableBody>
+                {filteredBooks.map((book) => (
+                  <TableRow key={book.id} hover>
+                    <TableCell sx={{ color: 'text.primary' }}>{book.id}</TableCell>
+                    <TableCell>
+                      <Typography 
+                        sx={{ 
+                          fontWeight: 'medium',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: '300px',
+                          color: 'text.primary'
+                        }}
+                      >
+                        {book.title}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={{ color: 'text.primary' }}>{book.author}</TableCell>
+                    <TableCell sx={{ color: 'text.primary' }}>{book.category || '—'}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={book.isAvailable ? 'Available' : 'Checked Out'}
+                        color={book.isAvailable ? 'success' : 'error'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <Tooltip title="View Book">
+                          <IconButton
+                            color="primary"
+                            onClick={() => handleViewBook(book.id)}
+                            size="small"
+                          >
+                            <Visibility />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Edit Book">
+                          <IconButton
+                            color="primary"
+                            onClick={() => handleEditBook(book.id)}
+                            size="small"
+                          >
+                            <Edit />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete Book">
+                          <IconButton
+                            color="error"
+                            onClick={() => handleDeleteBook(book.id)}
+                            size="small"
+                            disabled={deletingBookId === book.id}
+                          >
+                            <Delete />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          
+          {/* Pagination Controls */}
+          <Stack spacing={2} sx={{ mt: 4, display: 'flex', alignItems: 'center' }}>
+            <Pagination 
+              count={Math.ceil(totalItems / pageSize)} 
+              page={page} 
+              onChange={handlePageChange}
+              color="primary"
+              size="large"
+              showFirstButton
+              showLastButton
+            />
+            <Typography variant="body2" color="text.secondary">
+              Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, totalItems)} of {totalItems} books
+            </Typography>
+          </Stack>
+        </>
       )}
     </Box>
   );

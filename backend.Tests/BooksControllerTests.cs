@@ -35,8 +35,13 @@ namespace backend.Tests
                 new BookDto { Id = 1, Title = "Test Book 1", Author = "Test Author 1" },
                 new BookDto { Id = 2, Title = "Test Book 2", Author = "Test Author 2" }
             };
-            _mockBookService.Setup(x => x.GetAllBooksAsync(null, true))
+
+            // Use the correct method: GetAllBooksAsync instead of GetFeaturedBooksAsync
+            _mockBookService.Setup(x => x.GetAllBooksAsync(null, true, It.IsAny<int>(), It.IsAny<int>()))
                 .ReturnsAsync(books);
+
+            _mockBookService.Setup(x => x.GetBooksCountAsync())
+                .ReturnsAsync(books.Count);
 
             var controller = new BooksController(_mockBookService.Object, _mockReviewService.Object, _mockLogger.Object);
 
@@ -45,7 +50,15 @@ namespace backend.Tests
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result.Result);
-            var returnedBooks = Assert.IsAssignableFrom<IEnumerable<BookDto>>(okResult.Value);
+
+            // Use property pattern matching to access the anonymous object properties
+            var resultValue = okResult.Value;
+
+            // Check if the resultValue has a 'books' property using reflection
+            var booksProperty = resultValue.GetType().GetProperty("books");
+            Assert.NotNull(booksProperty);
+
+            var returnedBooks = (IEnumerable<BookDto>)booksProperty.GetValue(resultValue);
             Assert.Equal(2, returnedBooks.Count());
         }
 
@@ -95,8 +108,17 @@ namespace backend.Tests
                 new BookDto { Id = 2, Title = "Book B", Author = "Author B" }
             };
 
-            _mockBookService.Setup(x => x.GetAllBooksAsync("title", true))
+            // Mock GetAllBooksAsync instead of GetFeaturedBooksAsync
+            _mockBookService.Setup(x => x.GetAllBooksAsync(
+                "title",
+                true,
+                It.IsAny<int>(),
+                It.IsAny<int>()))
                 .ReturnsAsync(books);
+
+            // Also mock the GetBooksCountAsync that should be called
+            _mockBookService.Setup(x => x.GetBooksCountAsync())
+                .ReturnsAsync(books.Count);
 
             var controller = new BooksController(_mockBookService.Object, _mockReviewService.Object, _mockLogger.Object);
 
@@ -105,7 +127,13 @@ namespace backend.Tests
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result.Result);
-            var returnedBooks = Assert.IsAssignableFrom<IEnumerable<BookDto>>(okResult.Value);
+
+            // Use reflection to access the books property
+            var booksProperty = okResult.Value.GetType().GetProperty("books");
+            Assert.NotNull(booksProperty); // Verify the property exists
+
+            var returnedBooks = Assert.IsAssignableFrom<IEnumerable<BookDto>>(
+                booksProperty.GetValue(okResult.Value));
             Assert.Equal(2, returnedBooks.Count());
         }
 
@@ -113,7 +141,12 @@ namespace backend.Tests
         public async Task GetAllBooks_ThrowsException_ReturnsServerError()
         {
             // Arrange
-            _mockBookService.Setup(x => x.GetAllBooksAsync(null, true))
+            // This should mock GetAllBooksAsync instead of GetFeaturedBooksAsync
+            _mockBookService.Setup(x => x.GetAllBooksAsync(
+                It.IsAny<string>(),
+                It.IsAny<bool>(),
+                It.IsAny<int>(),
+                It.IsAny<int>()))
                 .ThrowsAsync(new Exception("Test exception"));
 
             var controller = new BooksController(_mockBookService.Object, _mockReviewService.Object, _mockLogger.Object);
@@ -160,8 +193,23 @@ namespace backend.Tests
                 new BookDto { Id = 1, Title = "Search Result 1", Author = "Author 1", Category = "Fiction" },
             };
 
-            _mockBookService.Setup(x => x.SearchBooksAsync("search", "Fiction", "Author 1", true, "title", true))
-                .ReturnsAsync(books);
+            // Include search count in the mocks
+            _mockBookService.Setup(x => x.GetSearchBooksCountAsync(
+                "search", "Fiction", "Author 1", true))
+                .ReturnsAsync(1);
+
+            // Update the setup to include pagination parameters
+            _mockBookService.Setup(x => x.SearchBooksAsync(
+                "search",
+                "Fiction",
+                "Author 1",
+                true,
+                "title",
+                true,
+                It.IsAny<int>(),
+                It.IsAny<int>()
+            ))
+            .ReturnsAsync(books);
 
             var controller = new BooksController(_mockBookService.Object, _mockReviewService.Object, _mockLogger.Object);
 
@@ -170,7 +218,13 @@ namespace backend.Tests
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result.Result);
-            var returnedBooks = Assert.IsAssignableFrom<IEnumerable<BookDto>>(okResult.Value);
+
+            // Use reflection to access the anonymous object properties
+            var resultValue = okResult.Value;
+            var booksProperty = resultValue.GetType().GetProperty("books");
+            Assert.NotNull(booksProperty);
+
+            var returnedBooks = (IEnumerable<BookDto>)booksProperty.GetValue(resultValue);
             Assert.Single(returnedBooks);
         }
 

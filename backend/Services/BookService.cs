@@ -11,9 +11,14 @@ public class BookService : IBookService
         _context = context;
     }
 
-    public async Task<IEnumerable<BookDto>> GetAllBooksAsync(string? sortBy = null, bool ascending = true)
+    public async Task<IEnumerable<BookDto>> GetAllBooksAsync(
+     string? sortBy = null,
+     bool ascending = true,
+     int page = 1,
+     int pageSize = 10)
     {
-        var query = _context.Books.AsQueryable();
+        // Start with a non-tracked query for better performance
+        var query = _context.Books.AsNoTracking().AsQueryable();
 
         // Apply sorting if specified
         if (!string.IsNullOrEmpty(sortBy))
@@ -27,10 +32,34 @@ public class BookService : IBookService
             };
         }
 
-        return await query
-            .Include(b => b.Reviews)
-            .Select(b => MapToBookDto(b))
+        // Apply pagination
+        var pagedQuery = query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize);
+
+        // Select only needed fields without loading whole entities
+        return await pagedQuery
+            .Select(b => new BookDto
+            {
+                Id = b.Id,
+                Title = b.Title,
+                Author = b.Author,
+                ISBN = b.ISBN,
+                PublishedDate = b.PublishedDate,
+                Description = b.Description,
+                CoverImage = b.CoverImage,
+                Publisher = b.Publisher,
+                Category = b.Category,
+                PageCount = b.PageCount,
+                IsAvailable = b.IsAvailable,
+                AverageRating = b.Reviews.Any() ? (decimal)b.Reviews.Average(r => r.Rating) : 0
+            })
             .ToListAsync();
+    }
+
+    public async Task<int> GetBooksCountAsync()
+    {
+        return await _context.Books.CountAsync();
     }
 
     public async Task<BookDto?> GetBookByIdAsync(int id)
@@ -43,13 +72,14 @@ public class BookService : IBookService
     }
 
     public async Task<IEnumerable<BookDto>> SearchBooksAsync(
-        string searchTerm,
-        string? category = null,
-        string? author = null,
-        bool? isAvailable = null,
-        string? sortBy = null,
-        bool ascending = true
-        )
+     string searchTerm,
+     string? category = null,
+     string? author = null,
+     bool? isAvailable = null,
+     string? sortBy = null,
+     bool ascending = true,
+     int page = 1,
+     int pageSize = 10)
     {
         var query = _context.Books.AsQueryable();
 
@@ -86,10 +116,47 @@ public class BookService : IBookService
             };
         }
 
-        return await query
+        // Apply pagination
+        var pagedQuery = query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize);
+
+        return await pagedQuery
             .Include(b => b.Reviews)
             .Select(b => MapToBookDto(b))
             .ToListAsync();
+    }
+
+    public async Task<int> GetSearchBooksCountAsync(
+    string searchTerm,
+    string? category = null,
+    string? author = null,
+    bool? isAvailable = null)
+    {
+        var query = _context.Books.AsQueryable();
+
+        // Apply the same filters as in SearchBooksAsync
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            query = query.Where(b => b.Title.Contains(searchTerm) || b.Author.Contains(searchTerm));
+        }
+
+        if (!string.IsNullOrEmpty(category))
+        {
+            query = query.Where(b => b.Category == category);
+        }
+
+        if (!string.IsNullOrEmpty(author))
+        {
+            query = query.Where(b => b.Author.Contains(author));
+        }
+
+        if (isAvailable.HasValue)
+        {
+            query = query.Where(b => b.IsAvailable == isAvailable.Value);
+        }
+
+        return await query.CountAsync();
     }
 
     public async Task<IEnumerable<BookDto>> GetFeaturedBooksAsync(
