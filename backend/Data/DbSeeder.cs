@@ -569,8 +569,8 @@ namespace backend.Data
             int width = 450;  // Fixed width to ensure images don't appear thin
             int height = 600; // Standard book cover ratio
 
-            // Generate a random image ID (Picsum has about 1084 images)
-            int imageId = _random.Next(1, 1084);
+            // Generate a random image ID
+            int imageId = _random.Next(1, 85);
 
             // 20% chance of grayscale images for variety
             bool grayscale = _random.NextDouble() > 0.8;

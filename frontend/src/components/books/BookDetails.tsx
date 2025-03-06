@@ -30,6 +30,7 @@ import { useAlert } from '../../context/AlertContext';
 import { formatDate } from '../../utils/dateUtils';
 import ReviewList from '../reviews/ReviewList';
 import ReviewForm from '../reviews/ReviewForm';
+import { getFallbackImageForBook, isFallbackImage } from '../../utils/imageUtils'
 
 const BookDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -169,17 +170,23 @@ const BookDetails: React.FC = () => {
         <Grid container spacing={4}>
           {/* Book Cover */}
           <Grid item xs={12} md={3}>
-            <Box
-              component="img"
-              src={book.coverImage || 'https://via.placeholder.com/300x450?text=No+Cover'}
-              alt={book.title}
-              sx={{
+          <Box
+            component="img"
+            src={book.coverImage || getFallbackImageForBook(book)}
+            alt={book.title}
+            onError={(e) => {
+                const currentSrc = e.currentTarget.src;
+                if (!isFallbackImage(currentSrc)) {
+                e.currentTarget.src = getFallbackImageForBook(book);
+                }
+            }}
+            sx={{
                 width: '100%',
                 maxHeight: 450,
                 objectFit: 'contain',
                 borderRadius: 1,
                 boxShadow: 3,
-              }}
+            }}
             />
           </Grid>
 

@@ -2,6 +2,7 @@ import React, { useCallback } from 'react';
 import { Card, CardContent, CardMedia, Typography, Rating, Box, Chip, CardActionArea } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { BookDto } from '../../types/book.types';
+import { getFallbackImageForBook, isFallbackImage } from '../../utils/imageUtils';
 
 interface BookCardProps {
   book: BookDto;
@@ -43,14 +44,17 @@ const BookCard: React.FC<BookCardProps> = ({ book, featured = false, index = 0 }
         }}
       >
         <Box sx={{ position: 'relative', overflow: 'hidden' }}>
-            <CardMedia
+        <CardMedia
             component="img"
             height={featured ? "380" : "320"}
-            image={book.coverImage || 'https://via.placeholder.com/300x450?text=No+Cover'}
+            image={book.coverImage || getFallbackImageForBook(book)}
             alt={`Cover of ${book.title}`}
             onError={(e) => {
-                // If image fails to load, replace with fallback
-                e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Cover';
+                // If image fails to load and isn't already a fallback, replace with fallback
+                const currentSrc = e.currentTarget.src;
+                if (!isFallbackImage(currentSrc)) {
+                e.currentTarget.src = getFallbackImageForBook(book);
+                }
             }}
             sx={{ 
                 objectFit: 'cover',
