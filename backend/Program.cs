@@ -1,4 +1,5 @@
 ﻿using backend.Data;
+using backend.Hubs;
 using backend.Models;
 using backend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using backend.Hubs;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -104,6 +106,8 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddSignalR();
+
 builder.Services.AddAuthorization();
 
 // Register services
@@ -112,6 +116,7 @@ builder.Services.AddScoped<IBookService, BookService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<ICheckoutService, CheckoutService>();
+builder.Services.AddScoped<IBookRecommendationService, BookRecommendationService>();
 builder.Services.AddHttpClient();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -134,7 +139,7 @@ app.UseCors("AllowReactApp");
 app.UseAuthentication();
 app.UseAuthorization();
 
-
+app.MapHub<ChatHub>("/chatHub");
 app.MapControllers();
 
 // Run database initialization
