@@ -56,7 +56,7 @@ const Header: React.FC = () => {
           >
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <BookIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-              Library Management System
+              Summit Library
             </Box>
           </Typography>
 

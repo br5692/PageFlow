@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Collections.Generic;  // Add this for List<string>
+using System.Collections.Generic;
 using backend.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,7 +30,6 @@ namespace backend.Services
                        "- Find books by [author name]\n" +
                        "- Books in [category]\n" +
                        "- Popular books\n" +
-                       "- New releases\n" +
                        "- How to checkout a book";
             }
 
@@ -59,18 +58,18 @@ namespace backend.Services
             }
 
             // Category search
-            if (lowerMessage.Contains("category") || lowerMessage.Contains("genre"))
-            {
-                foreach (var category in await GetCategories())
-                {
-                    if (lowerMessage.Contains(category.ToLower()))
-                    {
-                        return await FindBooksByCategory(category);
-                    }
-                }
-            }
+            //if (lowerMessage.Contains("category") || lowerMessage.Contains("genre"))
+            //{
+            //    foreach (var category in await GetCategories())
+            //    {
+            //        if (lowerMessage.Contains(category.ToLower()))
+            //        {
+            //            return await FindBooksByCategory(category);
+            //        }
+            //    }
+            //}
 
-            // Popular books
+            // Popular books - FIXED
             if (lowerMessage.Contains("popular") || lowerMessage.Contains("top rated"))
             {
                 return await GetPopularBooks();
@@ -117,53 +116,62 @@ namespace backend.Services
             return response;
         }
 
-        private async Task<string> FindBooksByCategory(string category)
-        {
-            var books = await _context.Books
-                .Where(b => b.Category == category && b.IsAvailable)
-                .Take(3)
-                .ToListAsync();
+        //private async Task<string> FindBooksByCategory(string category)
+        //{
+        //    var books = await _context.Books
+        //        .Where(b => b.Category == category && b.IsAvailable)
+        //        .Take(3)
+        //        .ToListAsync();
 
-            if (!books.Any())
-                return $"I couldn't find any available books in {category}. Try another category?";
+        //    if (!books.Any())
+        //        return $"I couldn't find any available books in {category}. Try another category?";
 
-            var response = $"Here are some available {category} books:\n";
-            foreach (var book in books)
-            {
-                response += $"- {book.Title} by {book.Author}\n";
-            }
-            return response;
-        }
+        //    var response = $"Here are some available {category} books:\n";
+        //    foreach (var book in books)
+        //    {
+        //        response += $"- {book.Title} by {book.Author}\n";
+        //    }
+        //    return response;
+        //}
 
         private async Task<string> GetPopularBooks()
         {
-            var books = await _context.Books
+            // FIXED: Include reviews and handle ratings properly
+            var booksWithReviews = await _context.Books
                 .Where(b => b.IsAvailable)
-                .OrderByDescending(b => b.Reviews.Average(r => r.Rating))
-                .Take(3)
+                .Include(b => b.Reviews)
                 .ToListAsync();
 
-            if (!books.Any())
-                return "I couldn't find any highly rated books right now.";
+            // Calculate average ratings manually
+            var booksWithRatings = booksWithReviews
+                .Select(b => new
+                {
+                    Book = b,
+                    AverageRating = b.Reviews.Any() ? b.Reviews.Average(r => r.Rating) : 0
+                })
+                .Where(b => b.AverageRating > 0)  // Only include books with ratings > 0
+                .OrderByDescending(b => b.AverageRating)
+                .Take(3)
+                .ToList();
+
+            if (!booksWithRatings.Any())
+                return "I couldn't find any highly rated books right now. Try checking out some books and leaving reviews!";
 
             var response = "Here are some popular books:\n";
-            foreach (var book in books)
+            foreach (var item in booksWithRatings)
             {
-                var avgRating = book.Reviews.Any()
-                    ? book.Reviews.Average(r => r.Rating)
-                    : 0;
-                response += $"- {book.Title} by {book.Author} ({avgRating:F1}★)\n";
+                response += $"- {item.Book.Title} by {item.Book.Author} ({item.AverageRating:F1}★)\n";
             }
             return response;
         }
 
-        private async Task<List<string>> GetCategories()
-        {
-            return await _context.Books
-                .Where(b => b.Category != null)
-                .Select(b => b.Category)
-                .Distinct()
-                .ToListAsync();
-        }
+        //private async Task<List<string>> GetCategories()
+        //{
+        //    return await _context.Books
+        //        .Where(b => b.Category != null)
+        //        .Select(b => b.Category)
+        //        .Distinct()
+        //        .ToListAsync();
+        //}
     }
 }

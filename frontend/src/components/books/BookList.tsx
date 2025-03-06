@@ -48,28 +48,38 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 4
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch filter options (categories, authors)
-  useEffect(() => {
-    if (!featured) {
-      const fetchAllOptions = async () => {
-        try {
-          const response = await bookService.getAllBooks(undefined, true, 1, 1000);
-          const booksData = response.data;
-          
-          const uniqueCategories = [...new Set(booksData
-            .map(book => book.category)
-            .filter((c): c is string => c !== undefined)
-          )];
-          
-          const uniqueAuthors = [...new Set(booksData.map(book => book.author))];
-          setAllCategories(uniqueCategories);
-          setAllAuthors(uniqueAuthors);
-        } catch (error) {
-          console.error('Failed to load filter options:', error);
+    useEffect(() => {
+        if (!featured) {
+        const fetchAllOptions = async () => {
+            try {
+            const response = await bookService.getAllBooks(undefined, true, 1, 1000);
+            const booksData = response.data;
+            
+            // Get unique categories and sort them alphabetically
+            const uniqueCategories = [...new Set(booksData
+                .map(book => book.category)
+                .filter((c): c is string => c !== undefined && c !== null)
+            )].sort();
+            
+            // Get unique authors
+            const uniqueAuthors = [...new Set(booksData.map(book => book.author))];
+            
+            // Sort authors by last name
+            const sortedAuthors = uniqueAuthors.sort((a, b) => {
+                const aLastName = a.split(' ').pop() || '';
+                const bLastName = b.split(' ').pop() || '';
+                return aLastName.localeCompare(bLastName);
+            });
+            
+            setAllCategories(uniqueCategories);
+            setAllAuthors(sortedAuthors);
+            } catch (error) {
+            console.error('Failed to load filter options:', error);
+            }
+        };
+        fetchAllOptions();
         }
-      };
-      fetchAllOptions();
-    }
-  }, [featured]);
+    }, [featured]);
 
   // Fetch books based on search parameters and pagination
   useEffect(() => {
