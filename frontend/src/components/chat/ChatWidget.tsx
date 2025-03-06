@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Box, 
   Paper, 
@@ -39,24 +39,44 @@ const ChatWidget: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
+  // Toggle chat window
+  const toggleChat = useCallback(() => {
+    setIsOpen(prev => !prev);
+  }, []);
+  
+  // Auto-scroll to bottom of messages
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+  
   // Initialize connection
   useEffect(() => {
     if (isOpen && !connection) {
       setIsConnecting(true);
       
-        // Get the server origin without the '/api' path
-        const serverUrl = new URL(API_BASE_URL).origin;
-
-        const newConnection = new signalR.HubConnectionBuilder()
+      // Get the server origin without the '/api' path
+      const serverUrl = new URL(API_BASE_URL).origin;
+  
+      const newConnection = new signalR.HubConnectionBuilder()
         .withUrl(`${serverUrl}/chatHub`, {
-            skipNegotiation: true,
-            transport: signalR.HttpTransportType.WebSockets
+          skipNegotiation: true,
+          transport: signalR.HttpTransportType.WebSockets
         })
-        .withAutomaticReconnect()
+        .withAutomaticReconnect({
+          nextRetryDelayInMilliseconds: (retryContext) => {
+            // Custom retry strategy
+            return retryContext.previousRetryCount === 0
+              ? 0   // Retry immediately on first attempt
+              : 1000 * (retryContext.previousRetryCount + 1); // Exponential backoff
+          }
+        })
         .build();
       
-      newConnection.start()
-        .then(() => {
+      const startConnection = async () => {
+        try {
+          await newConnection.start();
           console.log('SignalR connected');
           setConnection(newConnection);
           setIsConnecting(false);
@@ -70,8 +90,7 @@ const ChatWidget: React.FC = () => {
               timestamp: new Date()
             }
           ]);
-        })
-        .catch(err => {
+        } catch (err) {
           console.error('SignalR connection error: ', err);
           setIsConnecting(false);
           setMessages([
@@ -82,62 +101,104 @@ const ChatWidget: React.FC = () => {
               timestamp: new Date()
             }
           ]);
-        });
-      
-      return () => {
-        if (newConnection.state === signalR.HubConnectionState.Connected) {
-          newConnection.stop();
+          
+          // Retry connection after a delay
+          setTimeout(startConnection, 5000);
         }
       };
+  
+      // Start initial connection
+      startConnection();
+      
+      return () => {
+        newConnection.stop()
+          .then(() => console.log('SignalR connection stopped'))
+          .catch(err => console.error('Error stopping connection', err));
+      };
     }
-  }, [isOpen]);
+  }, [isOpen, isAuthenticated]);
   
   // Set up message handler
   useEffect(() => {
     if (connection) {
-      connection.on('ReceiveMessage', (user, text, isBot) => {
+      const handleReceiveMessage = (user: string, text: string, isBot: boolean) => {
         setMessages(prev => [...prev, {
           user,
           text,
           isBot,
           timestamp: new Date()
         }]);
-      });
+      };
+  
+      connection.on('ReceiveMessage', handleReceiveMessage);
       
+      // Add connection state change handlers
+      connection.onclose((error) => {
+        console.log('SignalR connection closed', error);
+        setConnection(null);
+      });
+  
       return () => {
-        connection.off('ReceiveMessage');
+        connection.off('ReceiveMessage', handleReceiveMessage);
+        
+        // Optional: stop connection when unmounting or changing authentication
+        connection.stop()
+          .then(() => console.log('SignalR connection stopped'))
+          .catch(err => console.error('Error stopping connection', err));
       };
     }
   }, [connection]);
   
-  // Auto-scroll to bottom on new messages
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages]);
+  // Modify sendMessage to handle connection state
+  const sendMessage = useCallback(async () => {
+    if (!message.trim()) return;
 
-  const toggleChat = () => {
-    setIsOpen(!isOpen);
-  };
+    try {
+      // Ensure connection exists and is in connected state
+      if (!connection || connection.state !== signalR.HubConnectionState.Connected) {
+        // Attempt to restart connection
+        if (connection) {
+          await connection.stop();
+        }
+        
+        // Recreate and start connection
+        const serverUrl = new URL(API_BASE_URL).origin;
+        const newConnection = new signalR.HubConnectionBuilder()
+          .withUrl(`${serverUrl}/chatHub`, {
+            skipNegotiation: true,
+            transport: signalR.HttpTransportType.WebSockets
+          })
+          .withAutomaticReconnect()
+          .build();
+        
+        await newConnection.start();
+        setConnection(newConnection);
+      }
 
-  const sendMessage = () => {
-    if (message.trim() && connection) {
+      // At this point, connection is guaranteed to be non-null
       const username = isAuthenticated ? user?.name : 'Guest';
-      connection.invoke('SendMessage', username, message)
-        .catch(err => console.error('Error sending message: ', err));
+      await connection!.invoke('SendMessage', username, message);
       setMessage('');
+    } catch (err) {
+      console.error('Error sending message: ', err);
+      // Optionally show an error to the user
+      setMessages(prev => [...prev, {
+        user: 'System',
+        text: 'Failed to send message. Please try again.',
+        isBot: true,
+        timestamp: new Date()
+      }]);
     }
-  };
+  }, [connection, isAuthenticated, user, message]);
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
-  };
+  }, [sendMessage]);
 
-  const renderMessageText = (text: string) => {
+  const renderMessageText = useCallback((text: string) => {
     // Handle newlines and book titles
     return text.split('\n').map((line, i) => (
       <React.Fragment key={i}>
@@ -145,7 +206,7 @@ const ChatWidget: React.FC = () => {
         {i < text.split('\n').length - 1 && <br />}
       </React.Fragment>
     ));
-  };
+  }, []);
 
   // If user is not authenticated, don't render the chat widget at all
   if (!isAuthenticated) {
