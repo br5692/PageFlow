@@ -1,4 +1,3 @@
-// src/components/home/HomeHero.tsx
 import React from 'react';
 import { Box, Typography, Button, Container, Paper, useTheme, useMediaQuery } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
@@ -99,7 +98,7 @@ const HomeHero: React.FC = () => {
                 <Button 
                   variant="outlined" 
                   size="large" 
-                  onClick={() => navigate('/books')}
+                  onClick={() => navigate('/login')}
                   sx={{ 
                     borderColor: 'white', 
                     color: 'white',
@@ -110,7 +109,7 @@ const HomeHero: React.FC = () => {
                     }
                   }}
                 >
-                  BROWSE COLLECTION
+                  LOGIN
                 </Button>
               </>
             ) : isCustomer ? (

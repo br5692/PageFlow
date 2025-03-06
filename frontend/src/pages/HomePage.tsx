@@ -15,83 +15,82 @@ const HomePage: React.FC = () => {
       {/* Hero Section */}
       <HomeHero />
       
-      <Container maxWidth="lg">
-        {/* Featured Books Section */}
-        <Box sx={{ mb: 10 }}>
-          <Box sx={{ mb: 5, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Typography 
-              variant="h6" 
-              component="div" 
-              color="primary"
-              fontWeight="500"
-              sx={{ mb: 1 }}
-            >
-              CURATED SELECTION
-            </Typography>
-            <Typography 
-              variant="h3" 
-              component="h2" 
-              fontWeight="bold"
-              align="center"
-              sx={{ mb: 1, letterSpacing: '-0.02em' }}
-            >
-              FEATURED BOOKS
-            </Typography>
-            <Box 
-              sx={{ 
-                width: 60, 
-                height: 4, 
-                backgroundColor: 'primary.main',
-                mt: 2
-              }} 
-            />
-          </Box>
-          <Suspense fallback={<Loading />}>
-            <BookList featured featuredCount={4} />
-          </Suspense>
-        </Box>
-        
-        <Divider sx={{ my: 6, borderColor: 'rgba(255,255,255,0.08)' }} />
-        
-        {isAuthenticated && (
-          <>
-            {/* New Arrivals Section */}
-            <Box sx={{ mb: 6 }}>
-              <Box sx={{ mb: 5, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <Typography 
-                  variant="h6" 
-                  component="div" 
-                  color="primary"
-                  fontWeight="500"
-                  sx={{ mb: 1 }}
-                >
-                  LATEST ADDITIONS
-                </Typography>
-                <Typography 
-                  variant="h3" 
-                  component="h2" 
-                  fontWeight="bold"
-                  align="center"
-                  sx={{ mb: 1, letterSpacing: '-0.02em' }}
-                >
-                  NEW ARRIVALS
-                </Typography>
-                <Box 
-                  sx={{ 
-                    width: 60, 
-                    height: 4, 
-                    backgroundColor: 'primary.main',
-                    mt: 2
-                  }} 
-                />
-              </Box>
-              <Suspense fallback={<Loading />}>
-                <NewArrivalsSection />
-              </Suspense>
+      {/* Only show these sections if user is authenticated */}
+      {isAuthenticated && (
+        <Container maxWidth="lg">
+          {/* Featured Books Section */}
+          <Box sx={{ mb: 10 }}>
+            <Box sx={{ mb: 5, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <Typography 
+                variant="h6" 
+                component="div" 
+                color="primary"
+                fontWeight="500"
+                sx={{ mb: 1 }}
+              >
+                CURATED SELECTION
+              </Typography>
+              <Typography 
+                variant="h3" 
+                component="h2" 
+                fontWeight="bold"
+                align="center"
+                sx={{ mb: 1, letterSpacing: '-0.02em' }}
+              >
+                FEATURED BOOKS
+              </Typography>
+              <Box 
+                sx={{ 
+                  width: 60, 
+                  height: 4, 
+                  backgroundColor: 'primary.main',
+                  mt: 2
+                }} 
+              />
             </Box>
-          </>
-        )}
-      </Container>
+            <Suspense fallback={<Loading />}>
+              <BookList featured featuredCount={4} />
+            </Suspense>
+          </Box>
+          
+          <Divider sx={{ my: 6, borderColor: 'rgba(255,255,255,0.08)' }} />
+          
+          {/* New Arrivals Section */}
+          <Box sx={{ mb: 6 }}>
+            <Box sx={{ mb: 5, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <Typography 
+                variant="h6" 
+                component="div" 
+                color="primary"
+                fontWeight="500"
+                sx={{ mb: 1 }}
+              >
+                LATEST ADDITIONS
+              </Typography>
+              <Typography 
+                variant="h3" 
+                component="h2" 
+                fontWeight="bold"
+                align="center"
+                sx={{ mb: 1, letterSpacing: '-0.02em' }}
+              >
+                NEW ARRIVALS
+              </Typography>
+              <Box 
+                sx={{ 
+                  width: 60, 
+                  height: 4, 
+                  backgroundColor: 'primary.main',
+                  mt: 2
+                }} 
+              />
+            </Box>
+            <Suspense fallback={<Loading />}>
+              <NewArrivalsSection />
+            </Suspense>
+          </Box>
+        </Container>
+      )}
     </Box>
   );
 };
