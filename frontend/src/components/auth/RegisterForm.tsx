@@ -88,26 +88,65 @@ const RegisterForm: React.FC = () => {
         .required('Required'),
       role: Yup.string().required('Required'),
     }),
+    // In RegisterForm.tsx, update the onSubmit function:
     onSubmit: async (values) => {
-      try {
-        await register({
-          email: values.email,
-          password: values.password,
-          role: values.role,
-        });
-        
-        setRegisterSuccess(true);
-        showAlert('success', 'Registration successful! Please login.');
-        
-        // Redirect to login after 2 seconds
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
-      } catch (error) {
-        // Error is already handled by the auth context
-      }
-    },
-  });
+        try {
+          await register({
+            email: values.email,
+            password: values.password,
+            role: values.role,
+          });
+          
+          setRegisterSuccess(true);
+          showAlert('success', 'Registration successful! Please login.');
+          
+          // Redirect to login after 2 seconds
+          setTimeout(() => {
+            navigate('/login');
+          }, 2000);
+        } catch (error: any) {
+          // Get the specific error response data
+          const errorData = error.response?.data;
+          
+          // Check specifically for the DuplicateUserName error code from the screenshot
+          if (errorData?.code === "DuplicateUserName") {
+            formik.setFieldError('email', 'This email is already registered. Please use another email or login.');
+            showAlert('error', 'This email is already registered');
+          } 
+          // Check for the presence of a description field containing "already taken"
+          else if (errorData?.description && errorData.description.includes('already taken')) {
+            formik.setFieldError('email', 'This email is already registered. Please use another email or login.');
+            showAlert('error', 'This email is already registered');
+          }
+          // For debugging - log the full error structure
+          else {
+            console.error('Registration error:', errorData);
+            
+            // Check for an array of errors that ASP.NET Identity sometimes returns
+            if (Array.isArray(errorData)) {
+              const duplicateError = errorData.find(err => 
+                err.code === "DuplicateUserName" || 
+                (err.description && err.description.includes('already taken'))
+              );
+              
+              if (duplicateError) {
+                formik.setFieldError('email', 'This email is already registered. Please use another email or login.');
+                showAlert('error', 'This email is already registered');
+                return;
+              }
+            }
+            
+            // Default error handling
+            const errorMessage = 
+              errorData?.message || 
+              errorData?.description || 
+              'Registration failed. Please try again.';
+            
+            showAlert('error', errorMessage);
+          }
+        }
+      },
+    });
 
   // Password validation feedback
   const passwordCriteria = checkPasswordCriteria(formik.values.password);
