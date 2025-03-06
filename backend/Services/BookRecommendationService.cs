@@ -28,8 +28,6 @@ namespace backend.Services
                 return "I can help you find books! Try asking:\n" +
                        "- Recommend a book\n" +
                        "- Find books by [author name]\n" +
-                       "- Books in [category]\n" +
-                       "- Popular books\n" +
                        "- How to checkout a book";
             }
 

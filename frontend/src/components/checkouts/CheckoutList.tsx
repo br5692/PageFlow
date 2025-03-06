@@ -18,31 +18,25 @@ import {
   CardContent,
   useMediaQuery,
   useTheme,
-  Badge,
   Tooltip,
 } from '@mui/material';
 import { 
   Event, 
   LibraryBooks, 
-  AccessTime, 
   CheckCircle, 
-  InfoOutlined, 
   Person,
-  Warning
 } from '@mui/icons-material';
 import { checkoutService } from '../../services/checkoutService';
 import { CheckoutDto } from '../../types/checkout.types';
-import { formatDate, getDueStatus, getDaysUntilDue } from '../../utils/dateUtils';
-import { useAlert } from '../../context/AlertContext';
+import { formatDate, getDaysUntilDue, getDueStatus } from '../../utils/dateUtils';import { useAlert } from '../../context/AlertContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 interface CheckoutListProps {
   admin?: boolean;
-  filter?: 'all' | 'due-soon' | 'overdue';
 }
 
-const CheckoutList: React.FC<CheckoutListProps> = ({ admin = false, filter = 'all'}) => {
+const CheckoutList: React.FC<CheckoutListProps> = ({ admin = false }) => {
   const [checkouts, setCheckouts] = useState<CheckoutDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [processingReturn, setProcessingReturn] = useState<number | null>(null);
@@ -72,9 +66,9 @@ const CheckoutList: React.FC<CheckoutListProps> = ({ admin = false, filter = 'al
         setLoading(false);
       }
     };
-
+  
     fetchCheckouts();
-  }, [admin, isLibrarian, showAlert, filter]);
+  }, [admin, isLibrarian, showAlert]);
 
   const handleReturn = async (checkoutId: number) => {
     setProcessingReturn(checkoutId);
@@ -82,7 +76,6 @@ const CheckoutList: React.FC<CheckoutListProps> = ({ admin = false, filter = 'al
       await checkoutService.returnBook(checkoutId);
       showAlert('success', 'Book returned successfully');
       
-      // Update local state to reflect the return
       setCheckouts(checkouts.filter(checkout => checkout.id !== checkoutId));
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Failed to return book';
@@ -100,29 +93,27 @@ const CheckoutList: React.FC<CheckoutListProps> = ({ admin = false, filter = 'al
     const daysLeft = getDaysUntilDue(dueDate);
     const status = getDueStatus(dueDate);
     
-    let text = '';
-    let color: 'success' | 'warning' | 'error' = 'success';
-    let icon = <InfoOutlined />;
+    let label = '';
+    let color: 'error' | 'warning' | 'success' = 'success';
     
-    if (status === 'overdue') {
-      text = `Overdue by ${Math.abs(daysLeft)} day${Math.abs(daysLeft) !== 1 ? 's' : ''}`;
-      color = 'error';
-      icon = <Warning />;
-    } else if (status === 'due-soon') {
-      text = daysLeft === 0 ? 'Due today' : `Due in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
-      color = 'warning';
-      icon = <AccessTime />;
-    } else {
-      text = `Due in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
-      color = 'success';
-      icon = <Event />;
+    switch(status) {
+      case 'overdue':
+        label = `Overdue by ${Math.abs(daysLeft)} day${Math.abs(daysLeft) !== 1 ? 's' : ''}`;
+        color = 'error';
+        break;
+      case 'due-soon':
+        label = daysLeft === 0 ? 'Due today' : `Due in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
+        color = 'warning';
+        break;
+      default:
+        label = `Due in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
+        color = 'success';
     }
-
+  
     return (
       <Tooltip title={formatDate(dueDate)}>
         <Chip
-          icon={icon}
-          label={text}
+          label={label}
           color={color}
           size="small"
           variant="outlined"

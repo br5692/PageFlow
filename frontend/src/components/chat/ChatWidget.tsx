@@ -147,6 +147,11 @@ const ChatWidget: React.FC = () => {
     ));
   };
 
+  // If user is not authenticated, don't render the chat widget at all
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
     <Box sx={{ position: 'fixed', bottom: 20, right: 20, zIndex: 1000 }}>
       {/* Chat button */}

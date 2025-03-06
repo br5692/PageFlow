@@ -14,7 +14,7 @@ const Footer: React.FC = () => {
     >
       <Container maxWidth="lg">
         <Typography variant="body2" color="text.secondary" align="center">
-          © {new Date().getFullYear()} Library Management System
+          © {new Date().getFullYear()} Summit Library
         </Typography>
         <Typography variant="body2" color="text.secondary" align="center">
           <Link color="inherit" href="/">
