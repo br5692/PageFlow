@@ -98,8 +98,14 @@ const CheckoutList: React.FC<CheckoutListProps> = ({ admin = false }) => {
     
     switch(status) {
       case 'overdue':
-        label = `Overdue by ${Math.abs(daysLeft)} day${Math.abs(daysLeft) !== 1 ? 's' : ''}`;
-        color = 'error';
+        // Only show overdue if it's been overdue for at least a full day
+        if (Math.abs(daysLeft) >= 1) {
+          label = `Overdue by ${Math.abs(daysLeft)} day${Math.abs(daysLeft) !== 1 ? 's' : ''}`;
+          color = 'error';
+        } else {
+          label = 'Due today';
+          color = 'warning';
+        }
         break;
       case 'due-soon':
         label = daysLeft === 0 ? 'Due today' : `Due in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
@@ -109,7 +115,7 @@ const CheckoutList: React.FC<CheckoutListProps> = ({ admin = false }) => {
         label = `Due in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
         color = 'success';
     }
-  
+    
     return (
       <Tooltip title={formatDate(dueDate)}>
         <Chip
