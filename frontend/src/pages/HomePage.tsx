@@ -53,7 +53,7 @@ const HomePage: React.FC = () => {
         
         <Divider sx={{ my: 6, borderColor: 'rgba(255,255,255,0.08)' }} />
         
-        {isAuthenticated && !isLibrarian && (
+        {isAuthenticated && (
           <>
             {/* New Arrivals Section */}
             <Box sx={{ mb: 6 }}>

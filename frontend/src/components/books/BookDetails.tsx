@@ -74,10 +74,12 @@ const BookDetails: React.FC = () => {
     try {
       setCheckingOut(true);
       await checkoutService.checkoutBook(book.id);
-      showAlert('success', 'Book checked out successfully');
       
-      // Update book to show it's no longer available
-      setBook({ ...book, isAvailable: false });
+      // Show success alert
+      showAlert('success', 'Book checked out successfully! Redirecting to your checkouts...');
+      
+      // Redirect to checkouts page
+      navigate('/checkouts');
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Failed to check out book';
       showAlert('error', errorMessage);

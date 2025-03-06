@@ -55,7 +55,7 @@ const HomeHero: React.FC = () => {
               textTransform: 'uppercase',
             }}
           >
-            THE PREMIUM
+            YOUR JOURNEY
           </Typography>
           <Typography 
             variant={isMobile ? 'h3' : 'h1'} 
@@ -66,7 +66,7 @@ const HomeHero: React.FC = () => {
               letterSpacing: '-0.02em',
             }}
           >
-            LITERARY EXPERIENCE
+            BEGINS HERE
           </Typography>
 
           <Typography 
@@ -78,7 +78,7 @@ const HomeHero: React.FC = () => {
               maxWidth: '90%'
             }}
           >
-            Discover exceptional literature, crafted reading experiences, and a community of discerning book enthusiasts.
+            Let your next read shape your world.
           </Typography>
 
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>

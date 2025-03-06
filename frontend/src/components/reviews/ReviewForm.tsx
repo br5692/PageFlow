@@ -1,5 +1,4 @@
-// src/components/reviews/ReviewForm.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -16,27 +15,45 @@ import { useAlert } from '../../context/AlertContext';
 
 interface ReviewFormProps {
   bookId: number;
+  disabled?: boolean;
 }
 
-const ReviewForm: React.FC<ReviewFormProps> = ({ bookId }) => {
+const ReviewForm: React.FC<ReviewFormProps> = ({ bookId, disabled = false }) => {
   const [hasReviewed, setHasReviewed] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const isMounted = useRef(true);
   const { showAlert } = useAlert();
+
+  // Reset the ref when component mounts/unmounts
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const checkIfUserReviewed = async () => {
       try {
-        const reviews = await reviewService.getReviewsByBookId(bookId);
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        const hasAlreadyReviewed = reviews.some(review => review.userId === user.id);
-        setHasReviewed(hasAlreadyReviewed);
+        setLoading(true);
+        // Only make API call if component is still mounted
+        if (isMounted.current) {
+          const reviews = await reviewService.getReviewsByBookId(bookId);
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          const hasAlreadyReviewed = reviews.some(review => review.userId === user.id);
+          if (isMounted.current) {
+            setHasReviewed(hasAlreadyReviewed);
+          }
+        }
       } catch (error) {
         console.error('Error checking if user has reviewed:', error);
       } finally {
-        setLoading(false);
+        if (isMounted.current) {
+          setLoading(false);
+        }
       }
     };
-
+    
     checkIfUserReviewed();
   }, [bookId]);
 
@@ -50,24 +67,32 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ bookId }) => {
       comment: Yup.string().nullable(),
     }),
     onSubmit: async (values) => {
+      if (disabled) return; // Prevent submission during stabilization
+      
       try {
-        await reviewService.createReview({
-          bookId,
-          rating: values.rating,
-          comment: values.comment,
-        });
-        
-        showAlert('success', 'Review submitted successfully');
-        setHasReviewed(true);
+        if (isMounted.current) {
+          await reviewService.createReview({
+            bookId,
+            rating: values.rating,
+            comment: values.comment,
+          });
+          
+          if (isMounted.current) {
+            showAlert('success', 'Review submitted successfully');
+            setHasReviewed(true);
+          }
+        }
       } catch (error: any) {
-        const errorMessage = error.response?.data?.message || 'Failed to submit review';
-        showAlert('error', errorMessage);
+        if (isMounted.current) {
+          const errorMessage = error.response?.data?.message || 'Failed to submit review';
+          showAlert('error', errorMessage);
+        }
       }
     },
   });
 
   if (loading) {
-    return <Box sx={{ py: 2 }}></Box>;
+    return <Box sx={{ py: 2, minHeight: '100px' }}></Box>;
   }
 
   if (hasReviewed) {
@@ -91,10 +116,12 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ bookId }) => {
             name="rating"
             value={formik.values.rating}
             onChange={(_, newValue) => {
+              if (disabled) return; // Prevent changes during stabilization
               formik.setFieldValue('rating', newValue);
             }}
             precision={1}
             size="large"
+            disabled={disabled || formik.isSubmitting}
           />
           {formik.touched.rating && formik.errors.rating && (
             <Typography variant="caption" color="error">
@@ -114,6 +141,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ bookId }) => {
           onChange={formik.handleChange}
           variant="outlined"
           margin="normal"
+          disabled={disabled || formik.isSubmitting}
         />
         
         <Box sx={{ mt: 2 }}>
@@ -121,7 +149,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ bookId }) => {
             type="submit"
             variant="contained"
             color="primary"
-            disabled={formik.isSubmitting}
+            disabled={formik.isSubmitting || disabled}
           >
             {formik.isSubmitting ? 'Submitting...' : 'Submit Review'}
           </Button>
