@@ -51,20 +51,13 @@ namespace backend.Constants
         // Expanded book subjects for more thematic depth
         public static readonly List<string> BookSubjects = new List<string>
         {
-            // Original subjects
-            "love", "time", "death", "life", "history", "space", "magic",
-            "technology", "war", "peace", "rebellion", "discovery", "transformation",
-            "betrayal", "redemption", "survival", "justice", "revenge", "forgiveness",
-            "power", "freedom", "wealth", "knowledge", "wisdom", "danger",
-            "cheese", "disco", "toast", "bagpipes", "zombies", "dragons", "politics",
-            
-            // New subjects
-            "memory", "sacrifice", "courage", "loyalty", "truth",
-            "deception", "identity", "legacy", "dreams", "secrets",
-            "fate", "honor", "corruption", "guilt", "desire",
-            "loss", "pride", "prejudice", "family", "friendship",
-            "obsession", "madness", "creativity", "faith", "doubt",
-            "change", "eternity", "mortality", "solitude", "chaos"
+            "Fiction", "Fantasy", "Science Fiction", "Mystery", "Thriller",
+            "Horror", "Romance", "Historical Fiction", "Literary Fiction",
+            "Non-Fiction", "Biography", "Autobiography", "History", "Science",
+            "Mathematics", "Computer Science", "Technology", "Philosophy",
+            "Psychology", "Self-Help", "Business", "Economics", "Politics",
+            "Travel", "Cookbooks", "Art", "Music", "Religion", "Spirituality",
+            "True Crime", "Poetry", "Drama", "Classics", "Young Adult", "Children's"
         };
 
         // Expanded characters for more diverse protagonists
