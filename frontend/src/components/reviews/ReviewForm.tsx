@@ -78,7 +78,6 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ bookId, disabled = false }) => 
           });
           
           if (isMounted.current) {
-            showAlert('success', 'Review submitted successfully');
             setHasReviewed(true);
           }
         }

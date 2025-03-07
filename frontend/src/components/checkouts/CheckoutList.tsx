@@ -28,7 +28,7 @@ import {
 } from '@mui/icons-material';
 import { checkoutService } from '../../services/checkoutService';
 import { CheckoutDto } from '../../types/checkout.types';
-import { formatDate, getDaysUntilDue, getDueStatus } from '../../utils/dateUtils';import { useAlert } from '../../context/AlertContext';
+import { formatDate, getDaysUntilDue, getDueStatus } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -40,7 +40,6 @@ const CheckoutList: React.FC<CheckoutListProps> = ({ admin = false }) => {
   const [checkouts, setCheckouts] = useState<CheckoutDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [processingReturn, setProcessingReturn] = useState<number | null>(null);
-  const { showAlert } = useAlert();
   const { isLibrarian } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -61,25 +60,23 @@ const CheckoutList: React.FC<CheckoutListProps> = ({ admin = false }) => {
         setCheckouts(fetchedCheckouts);
       } catch (error: any) {
         const errorMessage = error.response?.data?.message || 'Failed to load checkouts';
-        showAlert('error', errorMessage);
+        console.log('Login error:', errorMessage);
       } finally {
         setLoading(false);
       }
     };
   
     fetchCheckouts();
-  }, [admin, isLibrarian, showAlert]);
+  }, [admin, isLibrarian]);
 
   const handleReturn = async (checkoutId: number) => {
     setProcessingReturn(checkoutId);
     try {
-      await checkoutService.returnBook(checkoutId);
-      showAlert('success', 'Book returned successfully');
-      
+      await checkoutService.returnBook(checkoutId);      
       setCheckouts(checkouts.filter(checkout => checkout.id !== checkoutId));
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Failed to return book';
-      showAlert('error', errorMessage);
+      console.log('Login error:', errorMessage);
     } finally {
       setProcessingReturn(null);
     }
