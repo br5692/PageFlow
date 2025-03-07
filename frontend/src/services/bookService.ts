@@ -1,6 +1,8 @@
 import api from './api';
 import { BookDto, BookCreateDto, BookUpdateDto, BookFilterParams, PaginatedResponse } from '../types/book.types';
 import { ReviewDto } from '../types/review.types';
+import { bookCache } from '../utils/bookCache';
+
 
 export const bookService = {
   getAllBooks: async (sortBy?: string, ascending: boolean = true, page: number = 1, pageSize: number = 20): Promise<PaginatedResponse<BookDto>> => {
@@ -42,6 +44,7 @@ export const bookService = {
   
   deleteBook: async (id: number): Promise<void> => {
     await api.delete(`/Books/${id}`);
+    bookCache.clearCache();
   },
   
   getBookReviews: async (bookId: number): Promise<ReviewDto[]> => {

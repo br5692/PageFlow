@@ -63,20 +63,20 @@ const Header: React.FC = () => {
           {/* Desktop Menu */}
           <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
             {isAuthenticated ? (
-              <>
+              <div>
                 <Button color="inherit" onClick={() => navigate('/books')} sx={{ color: 'text.primary' }}>
                   Browse Books
                 </Button>
 
                 {isLibrarian ? (
-                  <>
+                  <div style={{ display: 'inline' }}>
                     <Button color="inherit" onClick={() => navigate('/admin/books')} sx={{ color: 'text.primary' }}>
                       Manage Books
                     </Button>
                     <Button color="inherit" onClick={() => navigate('/admin/checkouts')} sx={{ color: 'text.primary' }}>
                       View Checkouts
                     </Button>
-                  </>
+                  </div>
                 ) : (
                   <Button color="inherit" onClick={() => navigate('/checkouts')} sx={{ color: 'text.primary' }}>
                     My Checkouts
@@ -91,7 +91,7 @@ const Header: React.FC = () => {
                   aria-haspopup="true"
                   onClick={handleMenu}
                   color="inherit"
-                  sx={{ color: 'text.primary' }}
+                  sx={{ color: 'text.primary', display: 'inline-flex' }}
                 >
                   <AccountCircle />
                 </IconButton>
@@ -118,9 +118,9 @@ const Header: React.FC = () => {
                     Logout
                   </MenuItem>
                 </Menu>
-              </>
+              </div>
             ) : (
-              <>
+              <div>
                 {/* Login/Register buttons for non-authenticated users */}
                 <Button color="inherit" onClick={() => navigate('/login')} sx={{ color: 'text.primary' }}>
                   Login
@@ -128,7 +128,7 @@ const Header: React.FC = () => {
                 <Button color="inherit" onClick={() => navigate('/register')} sx={{ color: 'text.primary' }}>
                   Register
                 </Button>
-              </>
+              </div>
             )}
           </Box>
 
@@ -153,20 +153,20 @@ const Header: React.FC = () => {
             onClose={handleMobileClose}
           >
             {isAuthenticated ? (
-              <>
+              <div>
                 <MenuItem onClick={() => { navigate('/books'); handleMobileClose(); }}>
                   Browse Books
                 </MenuItem>
 
                 {isLibrarian ? (
-                  <>
+                  <div>
                     <MenuItem onClick={() => { navigate('/admin/books'); handleMobileClose(); }}>
                       Manage Books
                     </MenuItem>
                     <MenuItem onClick={() => { navigate('/admin/checkouts'); handleMobileClose(); }}>
                       View Checkouts
                     </MenuItem>
-                  </>
+                  </div>
                 ) : (
                   <MenuItem onClick={() => { navigate('/checkouts'); handleMobileClose(); }}>
                     My Checkouts
@@ -175,16 +175,16 @@ const Header: React.FC = () => {
                 <MenuItem onClick={handleLogout}>
                   Logout ({user?.name})
                 </MenuItem>
-              </>
+              </div>
             ) : (
-              <>
+              <div>
                 <MenuItem onClick={() => { navigate('/login'); handleMobileClose(); }}>
                   Login
                 </MenuItem>
                 <MenuItem onClick={() => { navigate('/register'); handleMobileClose(); }}>
                   Register
                 </MenuItem>
-              </>
+              </div>
             )}
           </Menu>
         </Toolbar>
