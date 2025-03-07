@@ -137,7 +137,7 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 4
     };
   
     fetchBooks();
-  }, [featured, featuredCount, searchParams, page, pageSize, showAlert]);
+  }, [featured, featuredCount, searchParams, page, pageSize]);
 
   // Refocus search input when search completes
   useEffect(() => {

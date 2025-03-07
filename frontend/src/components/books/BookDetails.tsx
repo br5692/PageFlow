@@ -66,7 +66,7 @@ const BookDetails: React.FC = () => {
     };
 
     fetchBook();
-  }, [id, showAlert]);
+  }, [id]);
 
   const handleCheckout = async () => {
     if (!book) return;
