@@ -52,10 +52,8 @@ const BookForm: React.FC<{ isEdit?: boolean }> = ({ isEdit = false }) => {
         setSubmitting(true);
         if (isEdit && id) {
           await bookService.updateBook({ id: parseInt(id), ...values });
-          showAlert('success', 'Book updated');
         } else {
           await bookService.createBook(values);
-          showAlert('success', 'Book created');
         }
         navigate('/admin/books');
       } catch (error: any) {

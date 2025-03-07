@@ -82,62 +82,64 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 4
     }, [featured]);
 
   // Fetch books based on search parameters and pagination
-  useEffect(() => {
-    const fetchBooks = async () => {
-      if (featured) {
-        setFeaturedLoading(true);
-      } else {
-        setLoading(true);
-      }
-  
-      if (searchInputRef.current === document.activeElement) {
-        setSearchWasActive(true);
-      }
-  
-      try {
+    useEffect(() => {
+        const fetchBooks = async () => {
         if (featured) {
-          // Use the bookCache utility instead of direct variable
-          const cachedBooks = bookCache.getFeaturedBooks();
-          if (cachedBooks) {
-            setBooks(cachedBooks);
-          } else {
-            const response = await bookService.getFeaturedBooks(featuredCount);
-            // Here's the fix - properly access data from the PaginatedResponse
+            setFeaturedLoading(true);
+        } else {
+            setLoading(true);
+        }
+        
+        if (searchInputRef.current === document.activeElement) {
+            setSearchWasActive(true);
+        }
+        
+        try {
+            if (featured) {
+            // Use the bookCache utility instead of direct variable
+            const cachedBooks = bookCache.getFeaturedBooks();
+            if (cachedBooks) {
+                setBooks(cachedBooks);
+            } else {
+                const response = await bookService.getFeaturedBooks(featuredCount);
+                // Here's the fix - properly access data from the PaginatedResponse
+                setBooks(response.data);
+                // Store in cache using the utility
+                bookCache.setFeaturedBooks(response.data);
+            }
+            } else {
+            const params = {
+                ...searchParams,
+                page,
+                pageSize
+            };
+        
+            let response;
+            if (searchParams.query || searchParams.category || searchParams.author || searchParams.isAvailable !== undefined) {
+                response = await bookService.searchBooks(params);
+            } else {
+                response = await bookService.getAllBooks(params.sortBy, params.ascending, page, pageSize);
+            }
+        
             setBooks(response.data);
-            // Store in cache using the utility
-            bookCache.setFeaturedBooks(response.data);
-          }
-        } else {
-          const params = {
-            ...searchParams,
-            page,
-            pageSize
-          };
-  
-          let response;
-          if (searchParams.query || searchParams.category || searchParams.author || searchParams.isAvailable !== undefined) {
-            response = await bookService.searchBooks(params);
-          } else {
-            response = await bookService.getAllBooks(params.sortBy, params.ascending, page, pageSize);
-          }
-  
-          setBooks(response.data);
-          setTotalPages(response.totalPages);
+            setTotalPages(response.totalPages);
+            }
+        } catch (error) {
+            console.error("Error fetching books:", error);
+            // Replace alert with console log
+            console.log('Failed to load books:', error);
+        } finally {
+            if (featured) {
+            setFeaturedLoading(false);
+            } else {
+            setLoading(false);
+            }
         }
-      } catch (error) {
-        console.error("Error fetching books:", error);
-        showAlert('error', 'Failed to load books');
-      } finally {
-        if (featured) {
-          setFeaturedLoading(false);
-        } else {
-          setLoading(false);
-        }
-      }
-    };
-  
-    fetchBooks();
-  }, [featured, featuredCount, searchParams, page, pageSize, showAlert]);
+        };
+        
+        fetchBooks();
+        // Remove showAlert from the dependency array
+    }, [featured, featuredCount, searchParams, page, pageSize]);
 
   // Refocus search input when search completes
   useEffect(() => {
