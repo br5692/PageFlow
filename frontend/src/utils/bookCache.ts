@@ -1,5 +1,4 @@
 import { BookDto } from '../types/book.types';
-import { PaginatedResponse } from '../types/book.types';
 
 // Cache for featured books
 let featuredBooksCache: BookDto[] | null = null;
@@ -15,12 +14,14 @@ export const bookCache = {
     if (!featuredBooksCache || Date.now() - lastFetchTime > CACHE_EXPIRY) {
       return null;
     }
-    return featuredBooksCache;
+    // Return a copy of the cached data to prevent accidental mutations
+    return [...featuredBooksCache];
   },
 
   // Set featured books in cache
   setFeaturedBooks(books: BookDto[]): void {
-    featuredBooksCache = books;
+    // Store a copy of the books to ensure immutability
+    featuredBooksCache = [...books];
     lastFetchTime = Date.now();
   },
 
