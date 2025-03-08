@@ -2,23 +2,25 @@ import api from './api';
 import { LoginDto, RegisterDto, AuthResponseDto, User } from '../types/auth.types';
 
 export const authService = {
-  // login: async (credentials: LoginDto): Promise<AuthResponseDto> => {
-  //   const response = await api.post<AuthResponseDto>('/Auth/login', credentials);
-  //   return response.data;
-  // },
-
-  login: async (credentials: LoginDto): Promise<any> => {
+  login: async (credentials: LoginDto): Promise<AuthResponseDto> => {
     try {
       const response = await api.post<AuthResponseDto>('/Auth/login', credentials);
       return response.data;
-    } catch (error) {
-      console.error('Auth service login error:', error);
-      throw error; // Make sure to re-throw the error
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Login failed';
+      console.error(`[AuthService] login failed: ${errorMessage}`, error);
+      throw error;
     }
   },
   
   register: async (userData: RegisterDto): Promise<void> => {
-    await api.post('/Auth/register', userData);
+    try {
+      await api.post('/Auth/register', userData);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Registration failed';
+      console.error(`[AuthService] register failed: ${errorMessage}`, error);
+      throw error;
+    }
   },
   
   logout: (): void => {
@@ -36,8 +38,13 @@ export const authService = {
   },
   
   getUser: (): User | null => {
-    const userData = localStorage.getItem('user');
-    return userData ? JSON.parse(userData) : null;
+    try {
+      const userData = localStorage.getItem('user');
+      return userData ? JSON.parse(userData) : null;
+    } catch (error: any) {
+      console.error('[AuthService] getUser failed: Error parsing user data', error);
+      return null;
+    }
   },
   
   isAuthenticated: (): boolean => {
