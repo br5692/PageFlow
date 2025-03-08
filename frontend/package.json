@@ -29,7 +29,9 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -60,13 +62,5 @@
     "msw": "^2.7.3",
     "sinon": "^19.0.2",
     "ts-jest": "^29.2.6"
-  },
-  "scripts": {
-  "start": "react-scripts start",
-  "build": "react-scripts build",
-  "test": "jest",
-  "test:watch": "jest --watch",
-  "test:coverage": "jest --coverage",
-  "eject": "react-scripts eject"
   }
 }
