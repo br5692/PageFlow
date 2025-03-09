@@ -73,7 +73,14 @@ const BookForm: React.FC<{ isEdit?: boolean }> = ({ isEdit = false }) => {
         const uniqueCategories = Array.from(
           new Set(data.map(book => book.category).filter(Boolean))
         ) as string[];
-        setCategories([...uniqueCategories, 'Fiction', 'Non-Fiction', 'Science', 'Technology']);
+        
+        // Define default categories
+        const defaultCategories = ['Fiction', 'Non-Fiction', 'Science', 'Technology'];
+        
+        // Combine and ensure uniqueness with Set
+        const allCategories = Array.from(new Set([...defaultCategories, ...uniqueCategories]));
+        
+        setCategories(allCategories);
       } catch (error) {
         console.error('Failed to fetch categories:', error);
       }
