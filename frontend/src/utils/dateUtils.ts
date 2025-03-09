@@ -47,9 +47,6 @@ export const getDaysUntilDue = (dueDate: string): number => {
   const diffTime = due.getTime() - today.getTime();
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   
-  // Add debugging
-  console.log(`getDaysUntilDue: Input=${dueDate}, Parsed=${due.toISOString()}, Today=${today.toISOString()}, DiffDays=${diffDays}`);
-  
   return diffDays;
 };
 
