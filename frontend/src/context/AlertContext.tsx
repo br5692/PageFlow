@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 
 type AlertType = 'success' | 'error' | 'info' | 'warning';
 
@@ -17,20 +17,38 @@ const AlertContext = createContext<AlertContextType | undefined>(undefined);
 
 export const AlertProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [alert, setAlert] = useState<Alert | null>(null);
+  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
-  const showAlert = (type: AlertType, message: string) => {
+  // Use useCallback to prevent unnecessary re-renders
+  const showAlert = useCallback((type: AlertType, message: string) => {
+    // Clear any existing timeout to prevent race conditions
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      setTimeoutId(null);
+    }
+
+    // Update the alert state immediately
     setAlert({ type, message });
     
-    // Auto hide after 5 seconds
-    setTimeout(() => {
+    // Set a new timeout for auto-hiding
+    const id = setTimeout(() => {
       setAlert(null);
     }, 5000);
-  };
+    
+    setTimeoutId(id);
+  }, [timeoutId]);
 
-  const hideAlert = () => {
+  const hideAlert = useCallback(() => {
+    // Clear any existing timeout
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      setTimeoutId(null);
+    }
+    
     setAlert(null);
-  };
+  }, [timeoutId]);
 
+  // Create the context value object
   const value = {
     alert,
     showAlert,

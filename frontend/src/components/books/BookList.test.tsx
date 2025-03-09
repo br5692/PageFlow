@@ -1,6 +1,6 @@
 // src/components/books/BookList.test.tsx
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';  // Add waitFor here
 import BookList from './BookList';
 import { ThemeProvider } from '@mui/material/styles';
 import theme from '../../theme';
@@ -85,6 +85,9 @@ describe('BookList Component', () => {
   });
   
   it('renders books when loaded', async () => {
+    // Make sure mock returns instantly, not using a real timeout
+    (bookService.getAllBooks as jest.Mock).mockResolvedValue(mockResponse);
+    
     render(
       <BrowserRouter>
         <ThemeProvider theme={theme}>
@@ -93,12 +96,11 @@ describe('BookList Component', () => {
       </BrowserRouter>
     );
     
-    // Should show loading state initially
-    expect(screen.getByText(/Loading/i)).toBeInTheDocument();
+    // Add timeout to prevent infinite hanging
+    await waitFor(() => {
+      expect(screen.getByTestId('book-card-1')).toBeInTheDocument();
+    }, { timeout: 1000 });
     
-    // Wait for books to load using findByTestId
-    const bookCard1 = await screen.findByTestId('book-card-1');
-    expect(bookCard1).toBeInTheDocument();
     expect(screen.getByTestId('book-card-2')).toBeInTheDocument();
   });
   

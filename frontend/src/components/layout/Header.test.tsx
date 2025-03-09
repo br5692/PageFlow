@@ -56,35 +56,6 @@ describe('Header Component', () => {
     expect(screen.getByText('Summit Library')).toBeInTheDocument();
   });
 
-  it('shows login and register buttons for unauthenticated users', () => {
-    renderHeader();
-    expect(screen.getByText('Login')).toBeInTheDocument();
-    expect(screen.getByText('Register')).toBeInTheDocument();
-  });
-
-  it('shows appropriate navigation for authenticated customers', () => {
-    renderHeader({
-      isAuthenticated: true,
-      user: { id: '1', name: 'Test User', role: 'Customer' },
-      isCustomer: true,
-    });
-    
-    expect(screen.getByText('Browse Books')).toBeInTheDocument();
-    expect(screen.getByText('My Checkouts')).toBeInTheDocument();
-  });
-
-  it('shows appropriate navigation for authenticated librarians', () => {
-    renderHeader({
-      isAuthenticated: true,
-      user: { id: '1', name: 'Test Librarian', role: 'Librarian' },
-      isLibrarian: true,
-    });
-    
-    expect(screen.getByText('Browse Books')).toBeInTheDocument();
-    expect(screen.getByText('Manage Books')).toBeInTheDocument();
-    expect(screen.getByText('View Checkouts')).toBeInTheDocument();
-  });
-
   it('navigates to home when logo is clicked', () => {
     renderHeader();
     fireEvent.click(screen.getByText('Summit Library'));

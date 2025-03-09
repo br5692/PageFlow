@@ -14,14 +14,15 @@ export const bookCache = {
     if (!featuredBooksCache || Date.now() - lastFetchTime > CACHE_EXPIRY) {
       return null;
     }
-    // Return a copy of the cached data to prevent accidental mutations
-    return [...featuredBooksCache];
+    
+    // Create a deep copy of the cached books
+    return JSON.parse(JSON.stringify(featuredBooksCache));
   },
 
   // Set featured books in cache
   setFeaturedBooks(books: BookDto[]): void {
-    // Store a copy of the books to ensure immutability
-    featuredBooksCache = [...books];
+    // Store a deep copy of the books to ensure immutability
+    featuredBooksCache = JSON.parse(JSON.stringify(books));
     lastFetchTime = Date.now();
   },
 

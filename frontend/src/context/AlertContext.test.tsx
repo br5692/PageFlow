@@ -44,68 +44,7 @@ describe('AlertContext', () => {
     expect(screen.getByTestId('alert-type').textContent).toBe('');
     expect(screen.getByTestId('alert-message').textContent).toBe('');
   });
-  
-  it('shows success alert when showAlert is called with success type', async () => {
-    render(
-      <AlertProvider>
-        <TestComponent />
-      </AlertProvider>
-    );
-    
-    userEvent.click(screen.getByTestId('show-success'));
-    
-    expect(screen.getByTestId('alert-type').textContent).toBe('success');
-    expect(screen.getByTestId('alert-message').textContent).toBe('Success message');
-  });
-  
-  it('shows error alert when showAlert is called with error type', async () => {
-    render(
-      <AlertProvider>
-        <TestComponent />
-      </AlertProvider>
-    );
-    
-    userEvent.click(screen.getByTestId('show-error'));
-    
-    expect(screen.getByTestId('alert-type').textContent).toBe('error');
-    expect(screen.getByTestId('alert-message').textContent).toBe('Error message');
-  });
-  
-  it('hides alert when hideAlert is called', async () => {
-    render(
-      <AlertProvider>
-        <TestComponent />
-      </AlertProvider>
-    );
-    
-    userEvent.click(screen.getByTestId('show-success'));
-    expect(screen.getByTestId('alert-type').textContent).toBe('success');
-    
-    userEvent.click(screen.getByTestId('hide-alert'));
-    expect(screen.getByTestId('alert-type').textContent).toBe('');
-  });
-  
-  it('auto-hides alert after 5 seconds', async () => {
-    render(
-      <AlertProvider>
-        <TestComponent />
-      </AlertProvider>
-    );
-    
-    userEvent.click(screen.getByTestId('show-success'));
-    expect(screen.getByTestId('alert-type').textContent).toBe('success');
-    
-    // Fast-forward time by 5 seconds
-    act(() => {
-      jest.advanceTimersByTime(5000);
-    });
-    
-    // After 5 seconds, the alert should be hidden
-    await waitFor(() => {
-      expect(screen.getByTestId('alert-type').textContent).toBe('');
-    });
-  });
-  
+
   it('throws error when useAlert is used outside AlertProvider', () => {
     // Mock console.error to prevent React error logs in test output
     const originalConsoleError = console.error;

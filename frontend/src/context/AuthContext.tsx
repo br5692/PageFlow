@@ -18,7 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Changed to false initially
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -27,7 +27,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (storedUser) {
       setUser(storedUser);
     }
-    setLoading(false);
 
     // If there's an error from a previous login attempt stored in sessionStorage, pull it in
     const storedError = sessionStorage.getItem('loginError');
@@ -37,8 +36,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const login = async (credentials: LoginDto) => {
+    setLoading(true); // Set loading true before try block to ensure it updates immediately
     try {
-      setLoading(true);
       setError(null);
       // Remove any existing stored error
       sessionStorage.removeItem('loginError');
@@ -75,8 +74,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const register = async (userData: RegisterDto) => {
+    setLoading(true); // Set loading true before try block to ensure it updates immediately
     try {
-      setLoading(true);
       setError(null);
       await authService.register(userData);
     } catch (err: any) {
@@ -88,6 +87,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = () => {
+    // Ensure we're actually calling the authService.logout method
     authService.logout();
     setUser(null);
 
