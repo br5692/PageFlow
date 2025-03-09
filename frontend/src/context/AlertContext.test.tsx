@@ -1,6 +1,5 @@
 import React from 'react';
-import { render, screen, act, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen} from '@testing-library/react';
 import { AlertProvider, useAlert } from './AlertContext';
 
 // Helper component to test the useAlert hook

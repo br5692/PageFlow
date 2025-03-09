@@ -6,7 +6,6 @@ import {
   Rating,
   Button,
   Chip,
-  Divider,
   Paper,
   Alert,
   Skeleton,
@@ -27,7 +26,6 @@ import { bookService } from '../../services/bookService';
 import { checkoutService } from '../../services/checkoutService';
 import { useAuth } from '../../context/AuthContext';
 import { useAlert } from '../../context/AlertContext';
-import { formatDate } from '../../utils/dateUtils';
 import ReviewList from '../reviews/ReviewList';
 import ReviewForm from '../reviews/ReviewForm';
 import { getFallbackImageForBook, isFallbackImage } from '../../utils/imageUtils'

@@ -1,4 +1,4 @@
-import { format, parseISO, isValid, differenceInDays } from 'date-fns';
+import { format, parseISO, isValid} from 'date-fns';
 
 export const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return 'N/A';

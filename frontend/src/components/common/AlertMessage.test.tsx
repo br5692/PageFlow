@@ -1,8 +1,7 @@
 import React, { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import AlertMessage from './AlertMessage';
-import { AlertProvider, useAlert } from '../../context/AlertContext';
+import { AlertProvider} from '../../context/AlertContext';
 
 // Mock MUI Snackbar and Alert components
 jest.mock('@mui/material', () => ({
@@ -24,29 +23,6 @@ jest.mock('@mui/material', () => ({
     <div data-testid={`alert-${props.severity}`} onClick={props.onClose}>{props.children}</div>
   )
 }));
-
-// Helper component to control the alert
-const TestComponent = () => {
-  const { showAlert } = useAlert();
-  
-  return (
-    <div>
-      <button 
-        data-testid="show-success" 
-        onClick={() => showAlert('success', 'Success message')}
-      >
-        Show Success
-      </button>
-      <button 
-        data-testid="show-error" 
-        onClick={() => showAlert('error', 'Error message')}
-      >
-        Show Error
-      </button>
-      <AlertMessage />
-    </div>
-  );
-};
 
 describe('AlertMessage', () => {
   it('does not render when no alert is shown', () => {
