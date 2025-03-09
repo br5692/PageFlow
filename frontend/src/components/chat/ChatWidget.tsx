@@ -45,11 +45,19 @@ const ChatWidget: React.FC = () => {
   }, []);
   
   // Auto-scroll to bottom of messages
+  // useEffect(() => {
+  //   if (messagesEndRef.current) {
+  //     messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+  //   }
+  // }, [messages]);
+
+  // Ensures scrollIntoView() is only called on a valid DOM element
   useEffect(() => {
-    if (messagesEndRef.current) {
+    if (messagesEndRef.current instanceof HTMLElement) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
+
   
   // Initialize connection
   useEffect(() => {

@@ -39,6 +39,7 @@ const BookDetails: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const { isAuthenticated, isLibrarian, isCustomer } = useAuth();
   const { showAlert } = useAlert();
+  const [reviewsKey, setReviewsKey] = useState<number>(0);
 
   useEffect(() => {
     const fetchBook = async () => {
@@ -105,6 +106,22 @@ const BookDetails: React.FC = () => {
         showAlert('error', error.response?.data?.message || 'Failed to delete book');
       }
     }
+  };
+  
+  const handleReviewSubmitted = async () => {
+    // Refresh the book data to get the updated average rating
+    if (id) {
+      try {
+        const bookId = parseInt(id);
+        const updatedBook = await bookService.getBookById(bookId);
+        setBook(updatedBook);
+      } catch (error) {
+        console.error("Error refreshing book details:", error);
+      }
+    }
+    
+    // Update the key to force ReviewList to re-render
+    setReviewsKey(prevKey => prevKey + 1);
   };
 
   if (loading) {
@@ -324,11 +341,14 @@ const BookDetails: React.FC = () => {
 
         {isAuthenticated && isCustomer && (
           <Box sx={{ mb: 4 }}>
-            <ReviewForm bookId={book.id} />
+            <ReviewForm 
+              bookId={book.id} 
+              onReviewSubmitted={handleReviewSubmitted}
+            />
           </Box>
         )}
 
-        <ReviewList bookId={book.id} />
+        <ReviewList bookId={book.id} key={reviewsKey} />
       </Paper>
     </Box>
   );

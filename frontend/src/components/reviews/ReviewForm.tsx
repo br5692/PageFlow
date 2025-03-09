@@ -16,9 +16,10 @@ import { useAlert } from '../../context/AlertContext';
 interface ReviewFormProps {
   bookId: number;
   disabled?: boolean;
+  onReviewSubmitted?: () => void; // New callback prop
 }
 
-const ReviewForm: React.FC<ReviewFormProps> = ({ bookId, disabled = false }) => {
+const ReviewForm: React.FC<ReviewFormProps> = ({ bookId, disabled = false, onReviewSubmitted }) => {
   const [hasReviewed, setHasReviewed] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const isMounted = useRef(true);
@@ -80,6 +81,11 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ bookId, disabled = false }) => 
           if (isMounted.current) {
             showAlert('success', 'Review submitted successfully');
             setHasReviewed(true);
+            
+            // Call the callback to notify parent component
+            if (onReviewSubmitted) {
+              onReviewSubmitted();
+            }
           }
         }
       } catch (error: any) {
