@@ -41,11 +41,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setError(null);
       // Remove any existing stored error
       sessionStorage.removeItem('loginError');
-
-      console.log('Attempting login with:', credentials.email);
-
       const response = await authService.login(credentials);
-      console.log('Login response received');
 
       // Store new auth data
       authService.storeAuthData(response);
