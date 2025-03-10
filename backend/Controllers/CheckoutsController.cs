@@ -6,6 +6,8 @@ using backend.DTOs;
 using backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace backend.Controllers
@@ -39,18 +41,29 @@ namespace backend.Controllers
 
                 return CreatedAtAction(nameof(GetCheckout), new { id = checkout.Id }, checkout);
             }
-            catch (KeyNotFoundException)
+            catch (KeyNotFoundException ex)
             {
-                _logger.LogWarning("Checkout failed: Book {BookId} not found", bookId);
+                _logger.LogWarning(ex, "Checkout failed: Book {BookId} not found", bookId);
                 return NotFound(new { message = "Book not found" });
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogWarning("Checkout failed for book {BookId}: {ErrorMessage}", bookId, ex.Message);
+                _logger.LogWarning(ex, "Checkout failed for book {BookId}: {ErrorMessage}", bookId, ex.Message);
                 return BadRequest(new { message = ex.Message });
+            }
+            catch (SqlException ex)
+            {
+                _logger.LogError(ex, "Database error while checking out book {BookId}: {Message}", bookId, ex.Message);
+                return StatusCode(503, "Service unavailable: Database error");
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Database update error while checking out book {BookId}: {Message}", bookId, ex.Message);
+                return StatusCode(503, "Error saving checkout to database");
             }
             catch (Exception ex)
             {
+                // Ensure the log message specifically contains "Error checking out book with ID"
                 _logger.LogError(ex, "Error checking out book with ID {BookId}", bookId);
                 return StatusCode(500, "An error occurred while checking out the book");
             }
@@ -77,10 +90,25 @@ namespace backend.Controllers
 
                 return Ok(checkout);
             }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Business rule violation while returning checkout {CheckoutId}: {Message}", checkoutId, ex.Message);
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (SqlException ex)
+            {
+                _logger.LogError(ex, "Database error while returning book for checkout {CheckoutId}: {Message}", checkoutId, ex.Message);
+                return StatusCode(503, new { message = "Service unavailable: Database error" });
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Database update error while returning book for checkout {CheckoutId}: {Message}", checkoutId, ex.Message);
+                return StatusCode(503, new { message = "Error updating checkout in database" });
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error returning book with checkout ID {CheckoutId}", checkoutId);
-                return StatusCode(500, "An error occurred while returning the book");
+                _logger.LogError(ex, "Unexpected error returning book with checkout ID {CheckoutId}", checkoutId);
+                return StatusCode(500, new { message = "An unexpected error occurred while returning the book" });
             }
         }
 
@@ -105,10 +133,15 @@ namespace backend.Controllers
 
                 return Ok(checkout);
             }
+            catch (SqlException ex)
+            {
+                _logger.LogError(ex, "Database error retrieving checkout {CheckoutId}: {Message}", id, ex.Message);
+                return StatusCode(503, new { message = "Service unavailable: Database error" });
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving checkout with ID {Id}", id);
-                return StatusCode(500, "An error occurred while retrieving the checkout");
+                _logger.LogError(ex, "Unexpected error retrieving checkout with ID {Id}", id);
+                return StatusCode(500, new { message = "An unexpected error occurred while retrieving the checkout" });
             }
         }
 
@@ -128,11 +161,16 @@ namespace backend.Controllers
 
                 return Ok(checkouts);
             }
+            catch (SqlException ex)
+            {
+                _logger.LogError(ex, "Database error retrieving user checkouts: {Message}", ex.Message);
+                return StatusCode(503, new { message = "Service unavailable: Database error" });
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving user checkouts for user {UserId}",
+                _logger.LogError(ex, "Unexpected error retrieving user checkouts for user {UserId}",
                     User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-                return StatusCode(500, "An error occurred while retrieving checkouts");
+                return StatusCode(500, new { message = "An unexpected error occurred while retrieving checkouts" });
             }
         }
 
@@ -150,10 +188,15 @@ namespace backend.Controllers
 
                 return Ok(checkouts);
             }
+            catch (SqlException ex)
+            {
+                _logger.LogError(ex, "Database error retrieving active checkouts: {Message}", ex.Message);
+                return StatusCode(503, new { message = "Service unavailable: Database error" });
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving active checkouts");
-                return StatusCode(500, "An error occurred while retrieving active checkouts");
+                _logger.LogError(ex, "Unexpected error retrieving active checkouts");
+                return StatusCode(500, new { message = "An unexpected error occurred while retrieving active checkouts" });
             }
         }
     }

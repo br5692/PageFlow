@@ -1,6 +1,8 @@
 ﻿using backend.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace backend.Controllers
@@ -22,17 +24,21 @@ namespace backend.Controllers
         public async Task<ActionResult<IEnumerable<ReviewDto>>> GetReviewsByBook(int bookId)
         {
             _logger.LogInformation("Retrieving reviews for book ID {BookId}", bookId);
-
             try
             {
                 var reviews = await _reviewService.GetReviewsByBookIdAsync(bookId);
                 _logger.LogInformation("Retrieved {Count} reviews for book ID {BookId}", reviews.Count(), bookId);
                 return Ok(reviews);
             }
+            catch (SqlException ex)
+            {
+                _logger.LogError(ex, "Database error retrieving reviews for book ID {BookId}: {Message}", bookId, ex.Message);
+                return StatusCode(500, "An error occurred while retrieving reviews");
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving reviews for book ID {BookId}", bookId);
-                return StatusCode(500, "An error occurred while retrieving reviews");
+                return StatusCode(500, "An internal error occurred");
             }
         }
 
@@ -63,13 +69,26 @@ namespace backend.Controllers
                 var review = await _reviewService.CreateReviewAsync(userId, reviewDto);
                 _logger.LogInformation("Review created with ID {ReviewId} for book {BookId} by user {UserId}",
                     review.Id, review.BookId, userId);
-
                 return CreatedAtAction(nameof(GetReviewsByBook), new { bookId = review.BookId }, review);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.LogError(ex, "Book not found when creating review for book ID {BookId}", reviewDto.BookId);
+                return StatusCode(500, "An error occurred while creating the review");
+            }
+            catch (SqlException ex)
+            {
+                _logger.LogError(ex, "Database error creating review for book ID {BookId}: {Message}", reviewDto.BookId, ex.Message);
+                return StatusCode(500, "An error occurred while creating the review");
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Database update error creating review for book ID {BookId}: {Message}", reviewDto.BookId, ex.Message);
+                return StatusCode(500, "An error occurred while creating the review");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating review for book ID {BookId} by user {UserId}",
-                    reviewDto.BookId, userId);
+                _logger.LogError(ex, "Unexpected error creating review for book ID {BookId}", reviewDto.BookId);
                 return StatusCode(500, "An error occurred while creating the review");
             }
         }

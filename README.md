@@ -65,7 +65,7 @@ A full-stack web application that replicates the functionality of a local librar
 ### Backend Setup
 
 1. **Clone the repository**
-  git clone https://github.com/your-username/PageFlow.git
+  git clone https://github.com/br5692/PageFlow.git
   cd PageFlow/backend
 
 2. **Configure the database connection and JWT key**

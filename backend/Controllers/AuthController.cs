@@ -3,6 +3,8 @@ using backend.Models;
 using backend.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 
@@ -41,21 +43,56 @@ namespace backend.Controllers
                 return BadRequest(ModelState);
             }
 
-            var user = new LibraryUser { UserName = model.Email, Email = model.Email };
-            var result = await _userManager.CreateAsync(user, model.Password);
-
-            if (!result.Succeeded)
+            try
             {
-                _logger.LogWarning("Failed to create user: {Email}, Errors: {@Errors}",
-                    model.Email, result.Errors);
-                return BadRequest(result.Errors);
+                var user = new LibraryUser { UserName = model.Email, Email = model.Email };
+                var result = await _userManager.CreateAsync(user, model.Password);
+
+                if (!result.Succeeded)
+                {
+                    // Log specific error scenarios
+                    var errors = result.Errors.Select(e => e.Description);
+                    _logger.LogWarning("User creation failed: {Email}, Errors: {@Errors}",
+                        model.Email, errors);
+
+                    // Check for specific error scenarios
+                    if (errors.Any(e => e.Contains("already taken") || e.Contains("User name")))
+                    {
+                        return BadRequest(new { message = "User already exists" });
+                    }
+
+                    return BadRequest(result.Errors);
+                }
+
+                // Add user to role
+                var roleResult = await _userManager.AddToRoleAsync(user, model.Role);
+                if (!roleResult.Succeeded)
+                {
+                    _logger.LogWarning("Failed to assign role {Role} to user: {Email}",
+                        model.Role, model.Email);
+                    return BadRequest(new { message = "Failed to assign user role" });
+                }
+
+                _logger.LogInformation("User registered successfully: {Email} with role: {Role}",
+                    model.Email, model.Role);
+
+                return Ok(new { message = "Registration successful!" });
             }
-
-            await _userManager.AddToRoleAsync(user, model.Role);
-            _logger.LogInformation("User registered successfully: {Email} with role: {Role}",
-                model.Email, model.Role);
-
-            return Ok(new { message = "Registration successful!" });
+            catch (SqlException ex)
+            {
+                _logger.LogError(ex, "Database error during user registration: {Message}", ex.Message);
+                return StatusCode(503, new { message = "Service unavailable: Database error" });
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Database update error during user registration: {Message}", ex.Message);
+                return StatusCode(503, new { message = "Error saving user to database" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during user registration for {Email}", model.Email);
+                return StatusCode(500, new { message = "An unexpected error occurred during registration" });
+            }
         }
 
         [HttpPost("login")]
@@ -63,36 +100,50 @@ namespace backend.Controllers
         {
             _logger.LogInformation("Login attempt for email: {Email}", model.Email);
 
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null)
+            try
             {
-                _logger.LogWarning("Login failed - user not found: {Email}", model.Email);
-                return Unauthorized(new { message = "Invalid credentials" });
+                var user = await _userManager.FindByEmailAsync(model.Email);
+                if (user == null)
+                {
+                    _logger.LogWarning("Login failed - user not found: {Email}", model.Email);
+                    return Unauthorized(new { message = "Invalid credentials" });
+                }
+
+                var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, false);
+                if (!result.Succeeded)
+                {
+                    _logger.LogWarning("Login failed - invalid password for user: {Email}", model.Email);
+                    return Unauthorized(new { message = "Invalid credentials" });
+                }
+
+                var token = await _tokenService.GenerateTokenAsync(user);
+                var roles = await _userManager.GetRolesAsync(user);
+                var primaryRole = roles.FirstOrDefault() ?? string.Empty;
+
+                _logger.LogInformation("User logged in successfully: {Email}, Role: {Role}",
+                    user.Email, primaryRole);
+
+                return Ok(new AuthResponseDto
+                {
+                    Success = true,
+                    Message = "Login successful",
+                    Token = token,
+                    UserId = user.Id,
+                    UserName = user.UserName,
+                    Role = primaryRole,
+                    Expiration = DateTime.UtcNow.AddHours(3)
+                });
             }
-
-            var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, false);
-            if (!result.Succeeded)
+            catch (SqlException ex)
             {
-                _logger.LogWarning("Login failed - invalid password for user: {Email}", model.Email);
-                return Unauthorized(new { message = "Invalid credentials" });
+                _logger.LogError(ex, "Database error during login: {Message}", ex.Message);
+                return StatusCode(503, new { message = "Service unavailable: Database error" });
             }
-
-            var token = await _tokenService.GenerateTokenAsync(user);
-            var roles = await _userManager.GetRolesAsync(user);
-
-            _logger.LogInformation("User logged in successfully: {Email}, Role: {Role}",
-                user.Email, roles.FirstOrDefault() ?? "No Role");
-
-            return Ok(new AuthResponseDto
+            catch (Exception ex)
             {
-                Success = true,
-                Message = "Login successful",
-                Token = token,
-                UserId = user.Id,
-                UserName = user.UserName,
-                Role = roles.FirstOrDefault() ?? string.Empty,
-                Expiration = DateTime.UtcNow.AddHours(3)
-            });
+                _logger.LogError(ex, "Unexpected error during login for {Email}", model.Email);
+                return StatusCode(500, new { message = "An unexpected error occurred during login" });
+            }
         }
     }
 }

@@ -2,6 +2,8 @@
 using backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 
 namespace backend.Controllers
 {
@@ -48,6 +50,16 @@ namespace backend.Controllers
                     totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
                 });
             }
+            catch (SqlException ex)
+            {
+                _logger.LogError(ex, "Database error getting all books: {Message}", ex.Message);
+                return StatusCode(503, "Service unavailable: Database error");
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "Invalid argument error getting all books: {Message}", ex.Message);
+                return BadRequest(ex.Message);
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting all books: {Message}", ex.Message);
@@ -75,9 +87,19 @@ namespace backend.Controllers
                     totalCount
                 });
             }
+            catch (SqlException ex)
+            {
+                _logger.LogError(ex, "Database error getting featured books: {Message}", ex.Message);
+                return StatusCode(503, "Service unavailable: Database error");
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "Invalid argument error getting featured books: {Message}", ex.Message);
+                return BadRequest(ex.Message);
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting featured books");
+                _logger.LogError(ex, "Error getting featured books: {Message}", ex.Message);
                 return StatusCode(500, "Internal server error");
             }
         }
@@ -111,9 +133,19 @@ namespace backend.Controllers
                     totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
                 });
             }
+            catch (SqlException ex)
+            {
+                _logger.LogError(ex, "Database error while searching books: {Message}", ex.Message);
+                return StatusCode(503, "Service unavailable: Database error");
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "Invalid search parameters: {Message}", ex.Message);
+                return BadRequest(ex.Message);
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error searching books with query: {Query}", query);
+                _logger.LogError(ex, "Error searching books with query: {Query}", ex.Message);
                 return StatusCode(500, "Internal server error");
             }
         }
@@ -133,6 +165,16 @@ namespace backend.Controllers
                 }
 
                 return Ok(book);
+            }
+            catch (SqlException ex)
+            {
+                _logger.LogError(ex, "Database error getting book with ID {BookId}: {Message}", id, ex.Message);
+                return StatusCode(503, "Service unavailable: Database error");
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "Invalid argument getting book with ID {BookId}: {Message}", id, ex.Message);
+                return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {
@@ -157,6 +199,27 @@ namespace backend.Controllers
                 var createdBook = await _bookService.CreateBookAsync(bookDto);
                 _logger.LogInformation("Book created successfully with ID: {BookId}", createdBook.Id);
                 return CreatedAtAction(nameof(GetBookById), new { id = createdBook.Id }, createdBook);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Business rule violation while creating book: {Message}", ex.Message);
+                return BadRequest(ex.Message);
+            }
+            catch (SqlException ex)
+            {
+                _logger.LogError(ex, "Database error while creating book: {Message}", ex.Message);
+
+                if (ex.Number == 2627 || ex.Number == 2601) // Unique constraint violation
+                {
+                    return Conflict("A book with the same key information already exists");
+                }
+
+                return StatusCode(503, "Service unavailable: Database error");
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Database update error creating book: {Message}", ex.Message);
+                return StatusCode(503, "Error saving to database");
             }
             catch (Exception ex)
             {
@@ -189,6 +252,32 @@ namespace backend.Controllers
                 _logger.LogInformation("Book updated successfully: {BookId} - {BookTitle}", updatedBook.Id, updatedBook.Title);
                 return Ok(updatedBook);
             }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Business rule violation while updating book with ID {BookId}: {Message}", bookDto.Id, ex.Message);
+                return BadRequest(ex.Message);
+            }
+            catch (SqlException ex)
+            {
+                _logger.LogError(ex, "Database error while updating book with ID {BookId}: {Message}", bookDto.Id, ex.Message);
+
+                if (ex.Number == 2627 || ex.Number == 2601) // Unique constraint violation
+                {
+                    return Conflict("Update would create a duplicate book");
+                }
+
+                return StatusCode(503, "Service unavailable: Database error");
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                _logger.LogError(ex, "Concurrency conflict updating book with ID {BookId}: {Message}", bookDto.Id, ex.Message);
+                return StatusCode(409, "The book was modified by another user. Please refresh and try again.");
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Database update error updating book with ID {BookId}: {Message}", bookDto.Id, ex.Message);
+                return StatusCode(503, "Error saving to database");
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating book with ID: {BookId}", bookDto.Id);
@@ -214,6 +303,34 @@ namespace backend.Controllers
                 _logger.LogInformation("Book deleted successfully: {BookId}", id);
                 return NoContent();
             }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Cannot delete book with ID {BookId}: {Message}", id, ex.Message);
+                return BadRequest(ex.Message);
+            }
+            catch (SqlException ex)
+            {
+                _logger.LogError(ex, "Database error while deleting book with ID {BookId}: {Message}", id, ex.Message);
+
+                if (ex.Number == 547) // Foreign key constraint violation
+                {
+                    return Conflict("Cannot delete this book as it is referenced by other records");
+                }
+
+                return StatusCode(503, "Service unavailable: Database error");
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Database update error deleting book with ID {BookId}: {Message}", id, ex.Message);
+
+                // Check if inner exception is a foreign key constraint violation
+                if (ex.InnerException is SqlException sqlEx && sqlEx.Number == 547)
+                {
+                    return Conflict("Cannot delete this book as it is referenced by other records");
+                }
+
+                return StatusCode(503, "Error deleting from database");
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deleting book with ID: {BookId}", id);
@@ -227,9 +344,23 @@ namespace backend.Controllers
             try
             {
                 _logger.LogInformation("Retrieving reviews for book ID {BookId}", id);
+
+                // Check if book exists first
+                var book = await _bookService.GetBookByIdAsync(id);
+                if (book == null)
+                {
+                    _logger.LogWarning("Attempted to get reviews for non-existent book ID {BookId}", id);
+                    return NotFound();
+                }
+
                 var reviews = await _reviewService.GetReviewsByBookIdAsync(id);
                 _logger.LogInformation("Retrieved {Count} reviews for book ID {BookId}", reviews.Count(), id);
                 return Ok(reviews);
+            }
+            catch (SqlException ex)
+            {
+                _logger.LogError(ex, "Database error retrieving reviews for book ID {BookId}: {Message}", id, ex.Message);
+                return StatusCode(503, "Service unavailable: Database error");
             }
             catch (Exception ex)
             {

@@ -479,12 +479,14 @@ namespace backend.Tests.Controllers
         public async Task GetBookReviews_ReturnsOkResult_WithReviews()
         {
             // Arrange
+            var bookId = 1;
+
             var reviews = new List<ReviewDto>
             {
                 new ReviewDto
                 {
                     Id = 1,
-                    BookId = 1,
+                    BookId = bookId,
                     UserId = "user1",
                     UserName = "User 1",
                     Rating = 5,
@@ -492,11 +494,22 @@ namespace backend.Tests.Controllers
                 }
             };
 
-            _mockReviewService.Setup(service => service.GetReviewsByBookIdAsync(1))
+            var book = new BookDto
+            {
+                Id = bookId,
+                Title = "Test Book",
+                Author = "Test Author"
+            };
+
+            // **Ensure the mock returns a book first**
+            _mockBookService.Setup(service => service.GetBookByIdAsync(bookId))
+                .ReturnsAsync(book);
+
+            _mockReviewService.Setup(service => service.GetReviewsByBookIdAsync(bookId))
                 .ReturnsAsync(reviews);
 
             // Act
-            var result = await _controller.GetBookReviews(1);
+            var result = await _controller.GetBookReviews(bookId);
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -522,5 +535,6 @@ namespace backend.Tests.Controllers
                     It.IsAny<Func<It.IsAnyType, Exception, string>>()),
                 Times.Once);
         }
+
     }
 }
