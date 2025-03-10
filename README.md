@@ -72,7 +72,9 @@ cd PageFlow/backend
   dotnet restore
 
 3. **Configure the Database Connection and JWT Key**
+
   dotnet user-secrets set "ConnectionStrings:LibraryDB" "Server=localhost;Database=LibraryDB;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=true"
+  
   dotnet user-secrets set "Jwt:Key" "YourSuperSecretKeyWithAtLeast32Characters"
 
 4. **Apply Database Migrations**
