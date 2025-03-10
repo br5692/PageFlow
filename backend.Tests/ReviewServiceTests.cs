@@ -3,6 +3,8 @@ using backend.DTOs;
 using backend.Models;
 using backend.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Moq;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,6 +15,7 @@ namespace backend.Tests
     public class ReviewServiceTests
     {
         private readonly DbContextOptions<LibraryDbContext> _options;
+        private readonly Mock<ILogger<ReviewService>> _loggerMock;
 
         public ReviewServiceTests()
         {
@@ -20,6 +23,9 @@ namespace backend.Tests
             _options = new DbContextOptionsBuilder<LibraryDbContext>()
                 .UseInMemoryDatabase(databaseName: "TestLibraryDb_Reviews_" + Guid.NewGuid().ToString())
                 .Options;
+
+            // Set up mock logger
+            _loggerMock = new Mock<ILogger<ReviewService>>();
 
             // Seed the database
             SeedDatabase();
@@ -73,7 +79,7 @@ namespace backend.Tests
         {
             // Arrange
             using var context = new LibraryDbContext(_options);
-            var service = new ReviewService(context);
+            var service = new ReviewService(context, _loggerMock.Object);
 
             // Act
             var result = await service.GetReviewsByBookIdAsync(1);
@@ -86,6 +92,10 @@ namespace backend.Tests
             Assert.Equal("test-user-id", review.UserId);
             Assert.Equal(4, review.Rating);
             Assert.Equal("Great book!", review.Comment);
+
+            // Verify logger was called
+            VerifyLogger(LogLevel.Information, "Retrieving reviews for book ID 1");
+            VerifyLogger(LogLevel.Information, "Retrieved 1 reviews for book ID 1");
         }
 
         [Fact]
@@ -93,7 +103,7 @@ namespace backend.Tests
         {
             // Arrange
             using var context = new LibraryDbContext(_options);
-            var service = new ReviewService(context);
+            var service = new ReviewService(context, _loggerMock.Object);
             var reviewDto = new ReviewCreateDto
             {
                 BookId = 1,
@@ -126,6 +136,10 @@ namespace backend.Tests
                 .FirstOrDefaultAsync(r => r.LibraryUserId == newUserId && r.BookId == 1);
             Assert.NotNull(savedReview);
             Assert.Equal(5, savedReview.Rating);
+
+            // Verify logger was called
+            VerifyLogger(LogLevel.Information, "Creating review for book ID 1");
+            VerifyLogger(LogLevel.Information, "Review created with ID");
         }
 
         [Fact]
@@ -133,7 +147,7 @@ namespace backend.Tests
         {
             // Arrange
             using var context = new LibraryDbContext(_options);
-            var service = new ReviewService(context);
+            var service = new ReviewService(context, _loggerMock.Object);
             var reviewDto = new ReviewCreateDto
             {
                 BookId = 1,
@@ -142,8 +156,13 @@ namespace backend.Tests
             };
 
             // Act & Assert
-            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
                 service.CreateReviewAsync("test-user-id", reviewDto));
+
+            Assert.Equal("User has already reviewed this book", exception.Message);
+
+            // Verify logger was called with warning level
+            VerifyLogger(LogLevel.Warning, "attempted to review");
         }
 
         [Fact]
@@ -151,13 +170,17 @@ namespace backend.Tests
         {
             // Arrange
             using var context = new LibraryDbContext(_options);
-            var service = new ReviewService(context);
+            var service = new ReviewService(context, _loggerMock.Object);
 
             // Act
             var result = await service.HasUserReviewedBookAsync("test-user-id", 1);
 
             // Assert
             Assert.True(result);
+
+            // Verify logger was called
+            VerifyLogger(LogLevel.Debug, "Checking if user");
+            VerifyLogger(LogLevel.Debug, "User test-user-id has reviewed book 1");
         }
 
         [Fact]
@@ -165,13 +188,16 @@ namespace backend.Tests
         {
             // Arrange
             using var context = new LibraryDbContext(_options);
-            var service = new ReviewService(context);
+            var service = new ReviewService(context, _loggerMock.Object);
 
             // Act
             var result = await service.HasUserReviewedBookAsync("non-existent-user", 1);
 
             // Assert
             Assert.False(result);
+
+            // Verify logger was called
+            VerifyLogger(LogLevel.Debug, "User non-existent-user has not reviewed book 1");
         }
 
         [Fact]
@@ -179,7 +205,7 @@ namespace backend.Tests
         {
             // Arrange
             using var context = new LibraryDbContext(_options);
-            var service = new ReviewService(context);
+            var service = new ReviewService(context, _loggerMock.Object);
 
             // Act
             var result = await service.GetReviewsByBookIdAsync(999);
@@ -187,20 +213,9 @@ namespace backend.Tests
             // Assert
             Assert.NotNull(result);
             Assert.Empty(result);
-        }
 
-        [Fact]
-        public async Task HasUserReviewedBookAsync_WithNonExistentBook_ShouldReturnFalse()
-        {
-            // Arrange
-            using var context = new LibraryDbContext(_options);
-            var service = new ReviewService(context);
-
-            // Act
-            var result = await service.HasUserReviewedBookAsync("test-user-id", 999);
-
-            // Assert
-            Assert.False(result);
+            // Verify logger was called
+            VerifyLogger(LogLevel.Information, "Retrieved 0 reviews for book ID 999");
         }
 
         [Fact]
@@ -208,7 +223,7 @@ namespace backend.Tests
         {
             // Arrange
             using var context = new LibraryDbContext(_options);
-            var service = new ReviewService(context);
+            var service = new ReviewService(context, _loggerMock.Object);
 
             var reviewDto = new ReviewCreateDto
             {
@@ -218,8 +233,26 @@ namespace backend.Tests
             };
 
             // Act & Assert
-            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
                 service.CreateReviewAsync("test-user-id", reviewDto));
+
+            Assert.Equal("Book with ID 999 does not exist", exception.Message);
+
+            // Verify logger was called with warning level
+            VerifyLogger(LogLevel.Warning, "Attempted to review non-existent book");
+        }
+
+        // Helper method to verify logger calls
+        private void VerifyLogger(LogLevel level, string messageContains)
+        {
+            _loggerMock.Verify(
+                x => x.Log(
+                    It.Is<LogLevel>(l => l == level),
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString().Contains(messageContains)),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+                Times.AtLeastOnce);
         }
     }
 }

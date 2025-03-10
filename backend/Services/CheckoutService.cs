@@ -18,14 +18,22 @@ namespace backend.Services
 
         public async Task<CheckoutDto> CheckoutBookAsync(string userId, int bookId)
         {
+            _logger.LogInformation("Attempting to checkout book {BookId} for user {UserId}", bookId, userId);
+
             // Check if book exists and is available
             var book = await _context.Books.FindAsync(bookId);
 
             if (book == null)
-                throw new KeyNotFoundException("Book not found");
+            {
+                _logger.LogWarning("Checkout failed: Book {BookId} not found", bookId);
+                throw new KeyNotFoundException($"Book with ID {bookId} not found");
+            }
 
             if (!book.IsAvailable)
-                throw new InvalidOperationException("Book is not available for checkout");
+            {
+                _logger.LogWarning("Checkout failed: Book {BookId} ({BookTitle}) is not available", bookId, book.Title);
+                throw new InvalidOperationException($"Book with ID {bookId} is not available for checkout");
+            }
 
             // Create the checkout
             var checkout = new Checkout
@@ -39,71 +47,146 @@ namespace backend.Services
             // Update book availability
             book.IsAvailable = false;
 
-            _context.Checkouts.Add(checkout);
-            await _context.SaveChangesAsync();
+            try
+            {
+                _context.Checkouts.Add(checkout);
+                await _context.SaveChangesAsync();
 
-            // Load related entities for the response
-            await _context.Entry(checkout)
-                .Reference(c => c.Book)
-                .LoadAsync();
+                _logger.LogInformation("Book {BookId} ({BookTitle}) successfully checked out by user {UserId}",
+                    bookId, book.Title, userId);
 
-            await _context.Entry(checkout)
-                .Reference(c => c.LibraryUser)
-                .LoadAsync();
+                // Load related entities for the response
+                await _context.Entry(checkout)
+                    .Reference(c => c.Book)
+                    .LoadAsync();
 
-            return MapToCheckoutDto(checkout);
+                await _context.Entry(checkout)
+                    .Reference(c => c.LibraryUser)
+                    .LoadAsync();
+
+                return MapToCheckoutDto(checkout);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while checking out book {BookId} for user {UserId}", bookId, userId);
+                throw;
+            }
         }
 
         public async Task<CheckoutDto?> ReturnBookAsync(int checkoutId)
         {
+            _logger.LogInformation("Attempting to return book for checkout {CheckoutId}", checkoutId);
+
             // Find the checkout
             var checkout = await _context.Checkouts
                 .Include(c => c.Book)
                 .Include(c => c.LibraryUser)
                 .FirstOrDefaultAsync(c => c.Id == checkoutId);
 
-            if (checkout == null || checkout.ReturnDate.HasValue)
+            if (checkout == null)
+            {
+                _logger.LogWarning("Return failed: Checkout {CheckoutId} not found", checkoutId);
                 return null;
+            }
 
-            // Update checkout and book
-            checkout.ReturnDate = DateTime.UtcNow;
-            checkout.Book.IsAvailable = true;
+            if (checkout.ReturnDate.HasValue)
+            {
+                _logger.LogWarning("Return failed: Book for checkout {CheckoutId} already returned on {ReturnDate}",
+                    checkoutId, checkout.ReturnDate);
+                return null;
+            }
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                // Update checkout and book
+                checkout.ReturnDate = DateTime.UtcNow;
+                checkout.Book.IsAvailable = true;
 
-            return MapToCheckoutDto(checkout);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Book {BookId} ({BookTitle}) successfully returned for checkout {CheckoutId} by user {UserId}",
+                    checkout.BookId, checkout.Book.Title, checkoutId, checkout.LibraryUserId);
+
+                return MapToCheckoutDto(checkout);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while returning book for checkout {CheckoutId}", checkoutId);
+                throw;
+            }
         }
 
         public async Task<IEnumerable<CheckoutDto>> GetUserCheckoutsAsync(string userId)
         {
-            var checkouts = await _context.Checkouts
-                .Include(c => c.Book)
-                .Include(c => c.LibraryUser)
-                .Where(c => c.LibraryUserId == userId && !c.ReturnDate.HasValue)
-                .ToListAsync();
+            _logger.LogInformation("Retrieving active checkouts for user {UserId}", userId);
 
-            return checkouts.Select(MapToCheckoutDto);
+            try
+            {
+                var checkouts = await _context.Checkouts
+                    .Include(c => c.Book)
+                    .Include(c => c.LibraryUser)
+                    .Where(c => c.LibraryUserId == userId && !c.ReturnDate.HasValue)
+                    .ToListAsync();
+
+                _logger.LogInformation("Retrieved {Count} active checkouts for user {UserId}", checkouts.Count, userId);
+                return checkouts.Select(MapToCheckoutDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while retrieving checkouts for user {UserId}", userId);
+                throw;
+            }
         }
 
         public async Task<IEnumerable<CheckoutDto>> GetAllActiveCheckoutsAsync()
         {
-            var checkouts = await _context.Checkouts
-                .Include(c => c.Book)
-                .Include(c => c.LibraryUser)
-                .Where(c => !c.ReturnDate.HasValue)
-                .ToListAsync();
+            _logger.LogInformation("Retrieving all active checkouts");
 
-            return checkouts.Select(MapToCheckoutDto);
+            try
+            {
+                var checkouts = await _context.Checkouts
+                    .Include(c => c.Book)
+                    .Include(c => c.LibraryUser)
+                    .Where(c => !c.ReturnDate.HasValue)
+                    .ToListAsync();
+
+                _logger.LogInformation("Retrieved {Count} active checkouts", checkouts.Count);
+                return checkouts.Select(MapToCheckoutDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while retrieving all active checkouts");
+                throw;
+            }
         }
 
         public async Task<CheckoutDto?> GetCheckoutByIdAsync(int id)
         {
-            var checkout = await _context.Checkouts
-                .Include(c => c.Book)
-                .Include(c => c.LibraryUser)
-                .FirstOrDefaultAsync(c => c.Id == id);
+            _logger.LogInformation("Retrieving checkout {CheckoutId}", id);
 
-            return checkout != null ? MapToCheckoutDto(checkout) : null;
+            try
+            {
+                var checkout = await _context.Checkouts
+                    .Include(c => c.Book)
+                    .Include(c => c.LibraryUser)
+                    .FirstOrDefaultAsync(c => c.Id == id);
+
+                if (checkout == null)
+                {
+                    _logger.LogWarning("Checkout {CheckoutId} not found", id);
+                    return null;
+                }
+
+                _logger.LogInformation("Successfully retrieved checkout {CheckoutId} for book {BookId} by user {UserId}",
+                    id, checkout.BookId, checkout.LibraryUserId);
+
+                return MapToCheckoutDto(checkout);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while retrieving checkout {CheckoutId}", id);
+                throw;
+            }
         }
 
         private static CheckoutDto MapToCheckoutDto(Checkout checkout)

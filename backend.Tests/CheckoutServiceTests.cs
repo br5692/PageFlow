@@ -99,6 +99,10 @@ namespace backend.Tests
             // Verify book is now unavailable
             var book = await context.Books.FindAsync(1);
             Assert.False(book.IsAvailable);
+
+            // Verify logging occurred
+            VerifyLogEntry(_mockLogger, LogLevel.Information, "Attempting to checkout book 1 for user test-user-id");
+            VerifyLogEntry(_mockLogger, LogLevel.Information, "Book 1 (Available Book) successfully checked out by user test-user-id");
         }
 
         [Fact]
@@ -111,6 +115,10 @@ namespace backend.Tests
             // Act & Assert
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
                 service.CheckoutBookAsync("test-user-id", 2));
+
+            // Verify logging occurred
+            VerifyLogEntry(_mockLogger, LogLevel.Information, "Attempting to checkout book 2 for user test-user-id");
+            VerifyLogEntry(_mockLogger, LogLevel.Warning, "Checkout failed: Book 2 (Checked Out Book) is not available");
         }
 
         [Fact]
@@ -131,6 +139,10 @@ namespace backend.Tests
             // Verify book is now available
             var book = await context.Books.FindAsync(2);
             Assert.True(book.IsAvailable);
+
+            // Verify logging occurred
+            VerifyLogEntry(_mockLogger, LogLevel.Information, "Attempting to return book for checkout 1");
+            VerifyLogEntry(_mockLogger, LogLevel.Information, "Book 2 (Checked Out Book) successfully returned for checkout 1 by user test-user-id");
         }
 
         [Fact]
@@ -148,6 +160,10 @@ namespace backend.Tests
             var checkout = result.First();
             Assert.Equal(2, checkout.BookId);
             Assert.Equal("test-user-id", checkout.UserId);
+
+            // Verify logging occurred
+            VerifyLogEntry(_mockLogger, LogLevel.Information, "Retrieving active checkouts for user test-user-id");
+            VerifyLogEntry(_mockLogger, LogLevel.Information, "Retrieved 1 active checkouts for user test-user-id");
         }
 
         [Fact]
@@ -165,6 +181,10 @@ namespace backend.Tests
             var checkout = result.First();
             Assert.Equal(2, checkout.BookId);
             Assert.Null(checkout.ReturnDate);
+
+            // Verify logging occurred
+            VerifyLogEntry(_mockLogger, LogLevel.Information, "Retrieving all active checkouts");
+            VerifyLogEntry(_mockLogger, LogLevel.Information, "Retrieved 1 active checkouts");
         }
 
         [Fact]
@@ -177,6 +197,10 @@ namespace backend.Tests
             // Act & Assert
             await Assert.ThrowsAsync<KeyNotFoundException>(() =>
                 service.CheckoutBookAsync("test-user-id", 999));
+
+            // Verify logging occurred
+            VerifyLogEntry(_mockLogger, LogLevel.Information, "Attempting to checkout book 999 for user test-user-id");
+            VerifyLogEntry(_mockLogger, LogLevel.Warning, "Checkout failed: Book 999 not found");
         }
 
         [Fact]
@@ -191,6 +215,10 @@ namespace backend.Tests
 
             // Assert
             Assert.Null(result);
+
+            // Verify logging occurred
+            VerifyLogEntry(_mockLogger, LogLevel.Information, "Attempting to return book for checkout 999");
+            VerifyLogEntry(_mockLogger, LogLevel.Warning, "Return failed: Checkout 999 not found");
         }
 
         [Fact]
@@ -213,11 +241,18 @@ namespace backend.Tests
             context.Checkouts.Add(checkout);
             await context.SaveChangesAsync();
 
+            // Reset mock to clear previous log entries
+            _mockLogger.Reset();
+
             // Act
             var result = await service.ReturnBookAsync(checkout.Id);
 
             // Assert
             Assert.Null(result);
+
+            // Verify logging occurred
+            VerifyLogEntry(_mockLogger, LogLevel.Information, $"Attempting to return book for checkout {checkout.Id}");
+            VerifyLogEntry(_mockLogger, LogLevel.Warning, $"Return failed: Book for checkout {checkout.Id} already returned on");
         }
 
         [Fact]
@@ -232,6 +267,10 @@ namespace backend.Tests
 
             // Assert
             Assert.Empty(result);
+
+            // Verify logging occurred
+            VerifyLogEntry(_mockLogger, LogLevel.Information, "Retrieving active checkouts for user non-existent-user");
+            VerifyLogEntry(_mockLogger, LogLevel.Information, "Retrieved 0 active checkouts for user non-existent-user");
         }
 
         [Fact]
@@ -249,11 +288,18 @@ namespace backend.Tests
             }
             await context.SaveChangesAsync();
 
+            // Reset mock to clear previous log entries
+            _mockLogger.Reset();
+
             // Act
             var result = await service.GetAllActiveCheckoutsAsync();
 
             // Assert
             Assert.Empty(result);
+
+            // Verify logging occurred
+            VerifyLogEntry(_mockLogger, LogLevel.Information, "Retrieving all active checkouts");
+            VerifyLogEntry(_mockLogger, LogLevel.Information, "Retrieved 0 active checkouts");
         }
 
         [Fact]
@@ -268,6 +314,23 @@ namespace backend.Tests
 
             // Assert
             Assert.Null(result);
+
+            // Verify logging occurred
+            VerifyLogEntry(_mockLogger, LogLevel.Information, "Retrieving checkout 999");
+            VerifyLogEntry(_mockLogger, LogLevel.Warning, "Checkout 999 not found");
+        }
+
+        // Helper method to verify log entries
+        private void VerifyLogEntry(Mock<ILogger<CheckoutService>> mockLogger, LogLevel logLevel, string messageContains)
+        {
+            mockLogger.Verify(
+                x => x.Log(
+                    It.Is<LogLevel>(l => l == logLevel),
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains(messageContains)),
+                    It.IsAny<Exception>(),
+                    It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)),
+                Times.AtLeastOnce);
         }
     }
 }

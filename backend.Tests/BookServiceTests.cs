@@ -3,6 +3,8 @@ using backend.DTOs;
 using backend.Models;
 using backend.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Moq;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,6 +15,7 @@ namespace backend.Tests
     public class BookServiceTests
     {
         private readonly DbContextOptions<LibraryDbContext> _options;
+        private readonly Mock<ILogger<BookService>> _mockLogger;
 
         public BookServiceTests()
         {
@@ -20,6 +23,9 @@ namespace backend.Tests
             _options = new DbContextOptionsBuilder<LibraryDbContext>()
                 .UseInMemoryDatabase(databaseName: "TestLibraryDb_" + Guid.NewGuid().ToString())
                 .Options;
+
+            // Create a mock logger
+            _mockLogger = new Mock<ILogger<BookService>>();
 
             // Seed the database
             SeedDatabase();
@@ -58,7 +64,7 @@ namespace backend.Tests
         {
             // Arrange
             using var context = new LibraryDbContext(_options);
-            var service = new BookService(context);
+            var service = new BookService(context, _mockLogger.Object);
 
             // Act - avoid deconstruction and access tuple properties directly
             var result = await service.GetAllBooksAsync();
@@ -77,7 +83,7 @@ namespace backend.Tests
         {
             // Arrange
             using var context = new LibraryDbContext(_options);
-            var service = new BookService(context);
+            var service = new BookService(context, _mockLogger.Object);
             var bookId = context.Books.First().Id;
 
             // Act
@@ -93,7 +99,7 @@ namespace backend.Tests
         {
             // Arrange
             using var context = new LibraryDbContext(_options);
-            var service = new BookService(context);
+            var service = new BookService(context, _mockLogger.Object);
 
             // Act
             var result = await service.GetBookByIdAsync(-1);
@@ -107,7 +113,7 @@ namespace backend.Tests
         {
             // Arrange
             using var context = new LibraryDbContext(_options);
-            var service = new BookService(context);
+            var service = new BookService(context, _mockLogger.Object);
 
             // Add books with different categories
             context.Books.Add(new Book
@@ -151,7 +157,7 @@ namespace backend.Tests
         {
             // Arrange
             using var context = new LibraryDbContext(_options);
-            var service = new BookService(context);
+            var service = new BookService(context, _mockLogger.Object);
 
             // Add more books for testing
             for (int i = 0; i < 10; i++)
@@ -179,7 +185,7 @@ namespace backend.Tests
         {
             // Arrange
             using var context = new LibraryDbContext(_options);
-            var service = new BookService(context);
+            var service = new BookService(context, _mockLogger.Object);
             var bookDto = new BookCreateDto
             {
                 Title = "New Book",
@@ -208,7 +214,7 @@ namespace backend.Tests
         {
             // Arrange
             using var context = new LibraryDbContext(_options);
-            var service = new BookService(context);
+            var service = new BookService(context, _mockLogger.Object);
 
             var book = new Book
             {
@@ -244,7 +250,7 @@ namespace backend.Tests
         {
             // Arrange
             using var context = new LibraryDbContext(_options);
-            var service = new BookService(context);
+            var service = new BookService(context, _mockLogger.Object);
 
             var bookDto = new BookUpdateDto
             {
@@ -265,7 +271,7 @@ namespace backend.Tests
         {
             // Arrange
             using var context = new LibraryDbContext(_options);
-            var service = new BookService(context);
+            var service = new BookService(context, _mockLogger.Object);
 
             var book = new Book
             {
@@ -291,7 +297,7 @@ namespace backend.Tests
         {
             // Arrange
             using var context = new LibraryDbContext(_options);
-            var service = new BookService(context);
+            var service = new BookService(context, _mockLogger.Object);
 
             // Act
             var result = await service.DeleteBookAsync(999);
@@ -305,7 +311,7 @@ namespace backend.Tests
         {
             // Arrange
             using var context = new LibraryDbContext(_options);
-            var service = new BookService(context);
+            var service = new BookService(context, _mockLogger.Object);
 
             var book = new Book
             {
@@ -328,7 +334,7 @@ namespace backend.Tests
         {
             // Arrange
             using var context = new LibraryDbContext(_options);
-            var service = new BookService(context);
+            var service = new BookService(context, _mockLogger.Object);
 
             var book = new Book
             {
@@ -356,7 +362,7 @@ namespace backend.Tests
             context.Books.RemoveRange(context.Books);
             await context.SaveChangesAsync();
 
-            var service = new BookService(context);
+            var service = new BookService(context, _mockLogger.Object);
 
             context.Books.Add(new Book { Title = "C Book", Author = "C Author" });
             context.Books.Add(new Book { Title = "A Book", Author = "A Author" });
