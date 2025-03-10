@@ -1,10 +1,6 @@
-﻿using System;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using backend.Data;
+﻿using backend.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+using System.Text.RegularExpressions;
 
 namespace backend.Services
 {

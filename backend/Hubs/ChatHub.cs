@@ -1,6 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR;
-using System.Threading.Tasks;
-using backend.Services;
+﻿using backend.Services;
+using Microsoft.AspNetCore.SignalR;
 
 namespace backend.Hubs
 {

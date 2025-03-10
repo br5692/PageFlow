@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using backend.Controllers;
+﻿using backend.Controllers;
 using backend.DTOs;
 using backend.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Xunit;
+using System.Security.Claims;
 
 namespace backend.Tests.Controllers
 {

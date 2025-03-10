@@ -1,6 +1,6 @@
 # PageFlow Library Management System
 
-A full-stack web application that replicates the functionality of a local library, allowing users to browse books, check them out, and leave reviews. Librarians can manage the inventory through an admin interface.
+A full-stack web application that replicates the functionality of a local library, allowing users to browse books, check them out and leave reviews. Librarians can manage the inventory through an admin interface.
 
 ## Technologies Used
 
@@ -64,38 +64,75 @@ A full-stack web application that replicates the functionality of a local librar
 
 ### Backend Setup
 
-1. **Clone the repository**
-  git clone https://github.com/br5692/PageFlow.git
-  cd PageFlow/backend
+1. **Clone the Repository**
+git clone https://github.com/br5692/PageFlow.git
+cd PageFlow/backend
 
-2. **Configure the database connection and JWT key**
+2. **Restore NuGet Packages**
+  dotnet restore
 
+3. **Configure the Database Connection and JWT Key**
   dotnet user-secrets set "ConnectionStrings:LibraryDB" "Server=localhost;Database=LibraryDB;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=true"
-  
   dotnet user-secrets set "Jwt:Key" "YourSuperSecretKeyWithAtLeast32Characters"
 
-3. **Apply database migrations**
+4. **Apply Database Migrations**
   dotnet ef database update
 
-4. **Run the backend**
+5. **Run the Backend**
   dotnet run
   The API will be available at https://localhost:7067 with Swagger UI at https://localhost:7067/swagger
 
 ### Frontend Setup
 
-1. **Navigate to the frontend directory**
+1. **Navigate to the Frontend Directory**
   cd ../frontend
 
-2. **Install dependencies**
+2. **Install Dependencies**
   npm install
 
-3. **Create environment file**
+3. **Create Environment File**
   Create a .env file with:
   REACT_APP_API_URL=https://localhost:7067/api
 
-4. **Start the development server**
+4. **Start the Development Server**
   npm start
   The app will be available at http://localhost:3000
+
+## Testing Instructions
+
+### Backend Testing
+1. **Running Tests**
+  - Open the solution in Visual Studio
+  - Open Test Explorer (Test > Test Explorer)
+  - If tests do not automatically appear:
+    * Right-click on the solution
+    * Select "Restore NuGet Packages"
+    * Go to Test > Test Explorer
+    * Click "Run All Tests" or right-click on specific test projects
+
+2. **Troubleshooting Test Discovery**
+  - Ensure all test projects reference the correct test SDK packages
+  - Verify xUnit or NUnit packages are correctly installed
+  - Rebuild the solution before running tests
+
+3. **Test Projects**
+  - Backend tests are located in dedicated test projects within the solution
+  - Includes unit tests for:
+    * Controllers
+    * Services
+    * Data Access
+
+### Frontend Testing
+1. **Running Tests**
+  cd frontend
+  npm test
+
+## Database Schema
+- **Books:** Stores book information
+- **Users:** ASP.NET Identity user accounts
+- **Checkouts:** Records of book borrowing
+- **Reviews:** User book ratings and comments
+- View the detailed Entity Relationship Diagram (ERD) at: https://dbdiagram.io/d/LMS-Schema-67c93002263d6cf9a0658ade
 
 ## Default Accounts
 After setup, the system is seeded with two default accounts:
@@ -125,12 +162,6 @@ After setup, the system is seeded with two default accounts:
 - `src/context/`: React context for global state
 - `src/utils/`: Helper functions
 - `src/types/`: TypeScript interfaces
-
-## Database Schema
-- **Books:** Stores book information
-- **Users:** ASP.NET Identity user accounts
-- **Checkouts:** Records of book borrowing
-- **Reviews:** User book ratings and comments
 
 ## API Documentation
 API documentation is available through Swagger UI at https://localhost:7067/swagger when the backend is running.

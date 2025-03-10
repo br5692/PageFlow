@@ -1,14 +1,9 @@
 ﻿using backend.Data;
-using backend.DTOs;
 using backend.Models;
 using backend.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Xunit;
 
 namespace backend.Tests
 {

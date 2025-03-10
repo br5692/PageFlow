@@ -2,7 +2,6 @@
 using backend.DTOs;
 using backend.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace backend.Services
 {

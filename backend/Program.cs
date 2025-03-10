@@ -4,13 +4,13 @@ using backend.Models;
 using backend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System.Text;
-using Microsoft.AspNetCore.ResponseCompression;
 using Serilog;
 using Serilog.Events;
+using System.Text;
 
 // Setup Serilog logger configuration
 Log.Logger = new LoggerConfiguration()

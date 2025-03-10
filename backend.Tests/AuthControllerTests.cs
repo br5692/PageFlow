@@ -6,10 +6,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System.Collections.Generic;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using Xunit;
 
 namespace backend.Tests
 {

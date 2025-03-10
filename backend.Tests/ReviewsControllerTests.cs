@@ -1,15 +1,10 @@
 ﻿using backend.Controllers;
 using backend.DTOs;
-using backend.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System;
-using System.Collections.Generic;
 using System.Security.Claims;
-using System.Threading.Tasks;
-using Xunit;
 
 namespace backend.Tests
 {
