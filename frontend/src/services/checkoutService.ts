@@ -6,7 +6,10 @@ export const checkoutService = {
   checkoutBook: async (bookId: number): Promise<CheckoutDto> => {
     try {
       const response = await api.post<CheckoutDto>(`/Checkouts/checkout/${bookId}`);
-      bookCache.updateBookInCache(bookId, { isAvailable: false });
+      
+      // Update this book's availability in all caches
+      bookCache.updateBookInCaches(bookId, { isAvailable: false });
+      
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || `Failed to checkout book with ID ${bookId}`;
@@ -18,7 +21,10 @@ export const checkoutService = {
   returnBook: async (checkoutId: number): Promise<CheckoutDto> => {
     try {
       const response = await api.post<CheckoutDto>(`/Checkouts/return/${checkoutId}`);
-      bookCache.updateBookInCache(response.data.bookId, { isAvailable: true });
+      
+      // Update this book's availability in all caches
+      bookCache.updateBookInCaches(response.data.bookId, { isAvailable: true });
+      
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || `Failed to return checkout with ID ${checkoutId}`;

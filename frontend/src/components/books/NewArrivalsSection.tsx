@@ -1,22 +1,38 @@
+// src/components/books/NewArrivalsSection.tsx
 import React, { useState, useEffect } from 'react';
 import { Grid, Box, Typography } from '@mui/material';
 import { bookService } from '../../services/bookService';
 import { BookDto } from '../../types/book.types';
 import BookCard from './BookCard';
 import Loading from '../common/Loading';
+import { bookCache } from '../../utils/bookCache';
 
 const NewArrivalsSection: React.FC = () => {
   const [books, setBooks] = useState<BookDto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [displayedBooks, setDisplayedBooks] = useState<BookDto[]>([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     const fetchBooks = async () => {
       try {
         setLoading(true);
-        // Fetch more books than we need to account for filtering (sort by ID descending to get newest first)
-        const response = await bookService.getAllBooks("id", false, 1, 50);
-        setBooks(response.data || []);
+        
+        // Try to get books from cache first
+        const cachedBooks = bookCache.getNewArrivalsBooks();
+        if (cachedBooks) {
+          setBooks(cachedBooks);
+          setLoading(false);
+          return;
+        }
+        
+        // If not in cache, fetch from API
+        const response = await bookService.getAllBooks("id", false, 1, 8);
+        const newestBooks = response.data || [];
+        
+        // Cache the books
+        bookCache.setNewArrivalsBooks(newestBooks);
+        
+        setBooks(newestBooks);
       } catch (error) {
         console.error("Error fetching new arrivals:", error);
       } finally {
@@ -25,23 +41,28 @@ const NewArrivalsSection: React.FC = () => {
     };
 
     fetchBooks();
-  }, []);
+  }, [refreshTrigger]);
 
-  // Process books to get the most recent ones
+  // Subscribe to cache changes when component mounts
   useEffect(() => {
-    if (books.length > 0) {
-      // Take the 8 newest books, regardless of cover image
-      // (BookCard will handle fallback images)
-      const newestBooks = books.slice(0, 8);
-      setDisplayedBooks(newestBooks);
-    }
-  }, [books]);
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key && e.key.includes('newArrivals')) {
+        setRefreshTrigger(prev => prev + 1);
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   if (loading) {
     return <Loading />;
   }
 
-  if (displayedBooks.length === 0) {
+  if (books.length === 0) {
     return (
       <Box sx={{ textAlign: 'center', my: 4 }}>
         <Typography variant="h6" color="text.secondary">
@@ -53,7 +74,7 @@ const NewArrivalsSection: React.FC = () => {
 
   return (
     <Grid container spacing={3}>
-      {displayedBooks.map((book, index) => (
+      {books.map((book, index) => (
         <Grid 
           item 
           key={book.id} 

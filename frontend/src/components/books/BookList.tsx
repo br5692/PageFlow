@@ -35,6 +35,7 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 4
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const [allAuthors, setAllAuthors] = useState<string[]>([]);
   const [searchWasActive, setSearchWasActive] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [searchParams, setSearchParams] = useState<BookFilterParams>({
     query: '',
     category: undefined,
@@ -48,38 +49,57 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 4
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch filter options (categories, authors)
-    useEffect(() => {
-        if (!featured) {
-        const fetchAllOptions = async () => {
-            try {
-            const response = await bookService.getAllBooks(undefined, true, 1, 1000);
-            const booksData = response.data;
-            
-            // Get unique categories and sort them alphabetically
-            const uniqueCategories = [...new Set(booksData
-                .map(book => book.category)
-                .filter((c): c is string => c !== undefined && c !== null)
-            )].sort();
-            
-            // Get unique authors
-            const uniqueAuthors = [...new Set(booksData.map(book => book.author))];
-            
-            // Sort authors by last name
-            const sortedAuthors = uniqueAuthors.sort((a, b) => {
-                const aLastName = a.split(' ').pop() || '';
-                const bLastName = b.split(' ').pop() || '';
-                return aLastName.localeCompare(bLastName);
-            });
-            
-            setAllCategories(uniqueCategories);
-            setAllAuthors(sortedAuthors);
-            } catch (error) {
-            console.error('Failed to load filter options:', error);
-            }
-        };
-        fetchAllOptions();
-        }
-    }, [featured]);
+  useEffect(() => {
+      if (!featured) {
+      const fetchAllOptions = async () => {
+          try {
+          const response = await bookService.getAllBooks(undefined, true, 1, 1000);
+          const booksData = response.data;
+          
+          // Get unique categories and sort them alphabetically
+          const uniqueCategories = [...new Set(booksData
+              .map(book => book.category)
+              .filter((c): c is string => c !== undefined && c !== null)
+          )].sort();
+          
+          // Get unique authors
+          const uniqueAuthors = [...new Set(booksData.map(book => book.author))];
+          
+          // Sort authors by last name
+          const sortedAuthors = uniqueAuthors.sort((a, b) => {
+              const aLastName = a.split(' ').pop() || '';
+              const bLastName = b.split(' ').pop() || '';
+              return aLastName.localeCompare(bLastName);
+          });
+          
+          setAllCategories(uniqueCategories);
+          setAllAuthors(sortedAuthors);
+          } catch (error) {
+          console.error('Failed to load filter options:', error);
+          }
+      };
+      fetchAllOptions();
+      }
+  }, [featured]);
+
+  useEffect(() => {
+    // Listen for storage events (this fires when localStorage changes in any tab)
+    const handleStorageChange = (e: StorageEvent) => {
+      // Only refresh if it's one of our cache keys
+      if (e.key && 
+          (e.key.includes('featured') || e.key.includes('newArrivals'))) {
+        // Increment refresh trigger to cause rerender
+        setRefreshTrigger(prev => prev + 1);
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   // Fetch books based on search parameters and pagination
   useEffect(() => {
@@ -96,15 +116,13 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 4
   
       try {
         if (featured) {
-          // Use the bookCache utility instead of direct variable
           const cachedBooks = bookCache.getFeaturedBooks();
-          if (cachedBooks) {
+          // Only use cache if we have the exact number of books we need
+          if (cachedBooks && cachedBooks.length === featuredCount) {
             setBooks(cachedBooks);
           } else {
             const response = await bookService.getFeaturedBooks(featuredCount);
-            // Here's the fix - properly access data from the PaginatedResponse
             setBooks(response.data);
-            // Store in cache using the utility
             bookCache.setFeaturedBooks(response.data);
           }
         } else {
@@ -137,7 +155,7 @@ const BookList: React.FC<BookListProps> = ({ featured = false, featuredCount = 4
     };
   
     fetchBooks();
-  }, [featured, featuredCount, searchParams, page, pageSize]);
+  }, [featured, featuredCount, searchParams, page, pageSize, refreshTrigger]);
 
   // Refocus search input when search completes
   useEffect(() => {
