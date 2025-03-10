@@ -69,7 +69,9 @@ A full-stack web application that replicates the functionality of a local librar
   cd PageFlow/backend
 
 2. **Configure the database connection and JWT key**
+
   dotnet user-secrets set "ConnectionStrings:LibraryDB" "Server=localhost;Database=LibraryDB;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=true"
+  
   dotnet user-secrets set "Jwt:Key" "YourSuperSecretKeyWithAtLeast32Characters"
 
 3. **Apply database migrations**
