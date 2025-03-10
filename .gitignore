@@ -32,3 +32,6 @@ secrets.json
 
 # Ignore published files
 publish/
+
+# Ignore logs directory
+logs/
