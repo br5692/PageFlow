@@ -72,6 +72,20 @@ namespace backend.Tests
             };
 
             var controller = new ReviewsController(_mockReviewService.Object, _mockLogger.Object);
+
+            // Assign a mock authenticated user to the controller context
+            var user = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, "test-user-id"),
+                new Claim(ClaimTypes.Role, "Customer")
+            }, "mock"));
+
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = user }
+            };
+
+            // Add invalid model state
             controller.ModelState.AddModelError("Rating", "Rating must be between 1 and 5");
 
             // Act
@@ -80,6 +94,7 @@ namespace backend.Tests
             // Assert
             Assert.IsType<BadRequestObjectResult>(result.Result);
         }
+
 
         [Fact]
         public async Task CreateReview_WhenUserAlreadyReviewed_ReturnsBadRequest()

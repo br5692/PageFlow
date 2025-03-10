@@ -4,6 +4,7 @@ using backend.Models;
 using backend.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Moq;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -17,6 +18,7 @@ namespace backend.Tests
         private readonly Mock<UserManager<LibraryUser>> _mockUserManager;
         private readonly Mock<SignInManager<LibraryUser>> _mockSignInManager;
         private readonly Mock<ITokenService> _mockTokenService;
+        private readonly Mock<ILogger<AuthController>> _mockLogger;
 
         public AuthControllerTests()
         {
@@ -25,7 +27,7 @@ namespace backend.Tests
             _mockUserManager = new Mock<UserManager<LibraryUser>>(
                 userStoreMock.Object, null, null, null, null, null, null, null, null);
 
-            // Setup SignInManager mock - this is more complex due to its dependencies
+            // Setup SignInManager mock
             var contextAccessorMock = new Mock<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
             var userPrincipalFactoryMock = new Mock<IUserClaimsPrincipalFactory<LibraryUser>>();
             _mockSignInManager = new Mock<SignInManager<LibraryUser>>(
@@ -36,6 +38,9 @@ namespace backend.Tests
 
             // Setup TokenService mock
             _mockTokenService = new Mock<ITokenService>();
+
+            // Setup Logger mock
+            _mockLogger = new Mock<ILogger<AuthController>>();
         }
 
         [Fact]
@@ -49,14 +54,13 @@ namespace backend.Tests
             _mockSignInManager.Setup(x => x.CheckPasswordSignInAsync(user, loginDto.Password, false))
                              .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
             _mockTokenService.Setup(x => x.GenerateTokenAsync(user)).ReturnsAsync("test-token");
-
-            // Setup GetRolesAsync to return a list of roles
             _mockUserManager.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Customer" });
 
             var controller = new AuthController(
                 _mockUserManager.Object,
                 _mockSignInManager.Object,
-                _mockTokenService.Object);
+                _mockTokenService.Object,
+                _mockLogger.Object);
 
             // Act
             var result = await controller.Login(loginDto);
@@ -83,7 +87,8 @@ namespace backend.Tests
             var controller = new AuthController(
                 _mockUserManager.Object,
                 _mockSignInManager.Object,
-                _mockTokenService.Object);
+                _mockTokenService.Object,
+                _mockLogger.Object);
 
             // Act
             var result = await controller.Login(loginDto);
@@ -114,7 +119,8 @@ namespace backend.Tests
             var controller = new AuthController(
                 _mockUserManager.Object,
                 _mockSignInManager.Object,
-                _mockTokenService.Object);
+                _mockTokenService.Object,
+                _mockLogger.Object);
 
             // Act
             var result = await controller.Register(registerDto);
@@ -137,7 +143,8 @@ namespace backend.Tests
             var controller = new AuthController(
                 _mockUserManager.Object,
                 _mockSignInManager.Object,
-                _mockTokenService.Object);
+                _mockTokenService.Object,
+                _mockLogger.Object);
 
             // Add model validation error
             controller.ModelState.AddModelError("Email", "Invalid email format");
@@ -167,7 +174,8 @@ namespace backend.Tests
             var controller = new AuthController(
                 _mockUserManager.Object,
                 _mockSignInManager.Object,
-                _mockTokenService.Object);
+                _mockTokenService.Object,
+                _mockLogger.Object);
 
             // Act
             var result = await controller.Register(registerDto);
@@ -198,7 +206,8 @@ namespace backend.Tests
             var controller = new AuthController(
                 _mockUserManager.Object,
                 _mockSignInManager.Object,
-                _mockTokenService.Object);
+                _mockTokenService.Object,
+                _mockLogger.Object);
 
             // Act
             var result = await controller.Register(registerDto);
@@ -227,7 +236,8 @@ namespace backend.Tests
             var controller = new AuthController(
                 _mockUserManager.Object,
                 _mockSignInManager.Object,
-                _mockTokenService.Object);
+                _mockTokenService.Object,
+                _mockLogger.Object);
 
             // Act
             var result = await controller.Login(loginDto);

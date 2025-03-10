@@ -1,8 +1,12 @@
-﻿using backend.DTOs;
+﻿using System;
+using System.Collections.Generic;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using backend.DTOs;
 using backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+using Microsoft.Extensions.Logging;
 
 namespace backend.Controllers
 {
@@ -26,15 +30,23 @@ namespace backend.Controllers
             try
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+                _logger.LogInformation("Attempting to checkout book {BookId} for user {UserId}", bookId, userId);
+
                 var checkout = await _checkoutService.CheckoutBookAsync(userId, bookId);
+
+                _logger.LogInformation("Book {BookId} ({BookTitle}) successfully checked out by user {UserId}",
+                    bookId, checkout.BookTitle, userId);
+
                 return CreatedAtAction(nameof(GetCheckout), new { id = checkout.Id }, checkout);
             }
             catch (KeyNotFoundException)
             {
+                _logger.LogWarning("Checkout failed: Book {BookId} not found", bookId);
                 return NotFound(new { message = "Book not found" });
             }
             catch (InvalidOperationException ex)
             {
+                _logger.LogWarning("Checkout failed for book {BookId}: {ErrorMessage}", bookId, ex.Message);
                 return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
@@ -50,10 +62,18 @@ namespace backend.Controllers
         {
             try
             {
+                _logger.LogInformation("Attempting to return book for checkout {CheckoutId}", checkoutId);
+
                 var checkout = await _checkoutService.ReturnBookAsync(checkoutId);
 
                 if (checkout == null)
+                {
+                    _logger.LogWarning("Return failed: Checkout {CheckoutId} not found or already returned", checkoutId);
                     return NotFound(new { message = "Checkout not found or already returned" });
+                }
+
+                _logger.LogInformation("Book {BookId} ({BookTitle}) successfully returned for checkout {CheckoutId}",
+                    checkout.BookId, checkout.BookTitle, checkoutId);
 
                 return Ok(checkout);
             }
@@ -70,10 +90,18 @@ namespace backend.Controllers
         {
             try
             {
+                _logger.LogInformation("Retrieving checkout {CheckoutId}", id);
+
                 var checkout = await _checkoutService.GetCheckoutByIdAsync(id);
 
                 if (checkout == null)
+                {
+                    _logger.LogWarning("Checkout {CheckoutId} not found", id);
                     return NotFound(new { message = "Checkout not found" });
+                }
+
+                _logger.LogInformation("Successfully retrieved checkout {CheckoutId} for book {BookId} by user {UserId}",
+                    id, checkout.BookId, checkout.UserId);
 
                 return Ok(checkout);
             }
@@ -91,12 +119,19 @@ namespace backend.Controllers
             try
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+                _logger.LogInformation("Retrieving active checkouts for user {UserId}", userId);
+
                 var checkouts = await _checkoutService.GetUserCheckoutsAsync(userId);
+
+                _logger.LogInformation("Retrieved {Count} active checkouts for user {UserId}",
+                    checkouts.Count(), userId);
+
                 return Ok(checkouts);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving user checkouts");
+                _logger.LogError(ex, "Error retrieving user checkouts for user {UserId}",
+                    User.FindFirstValue(ClaimTypes.NameIdentifier)!);
                 return StatusCode(500, "An error occurred while retrieving checkouts");
             }
         }
@@ -107,7 +142,12 @@ namespace backend.Controllers
         {
             try
             {
+                _logger.LogInformation("Retrieving all active checkouts");
+
                 var checkouts = await _checkoutService.GetAllActiveCheckoutsAsync();
+
+                _logger.LogInformation("Retrieved {Count} active checkouts", checkouts.Count());
+
                 return Ok(checkouts);
             }
             catch (Exception ex)
