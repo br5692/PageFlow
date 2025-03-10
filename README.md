@@ -132,7 +132,9 @@ cd PageFlow/backend
 
 ### Frontend Testing
 1. **Running Tests**
+
   cd frontend
+
   npm test
 
 ## Database Schema
