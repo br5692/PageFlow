@@ -28,15 +28,29 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
+    // Set explicit URLs only for local development, let hosting decide in production
+    if (builder.Environment.IsDevelopment())
+    {
+        builder.WebHost.UseUrls("http://localhost:5000", "https://localhost:5001");
+    }
+
+
     // Configure builder to use Serilog
     builder.Host.UseSerilog();
 
     // Add services to the container.
     builder.Services.AddControllers();
 
-    // Register DbContext
+    // Register DbContext with retry logic
     builder.Services.AddDbContext<LibraryDbContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("LibraryDB"))
+        options.UseSqlServer(builder.Configuration.GetConnectionString("LibraryDB"), sqlOptions =>
+        {
+            sqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 5, // Number of retries
+                maxRetryDelay: TimeSpan.FromSeconds(10), // Time between retries
+                errorNumbersToAdd: null // Use default SQL Server transient errors
+            );
+        })
     );
 
     // Configure ASP.NET Identity

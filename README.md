@@ -80,7 +80,13 @@ cd PageFlow/backend
 
 5. **Run the Backend**
   dotnet run
-  The API will be available at https://localhost:7067 with Swagger UI at https://localhost:7067/swagger
+  The API will be available at:
+  - **HTTP:** `http://localhost:5000`
+  - **HTTPS:** `https://localhost:5001`
+
+  You can access the **Swagger UI** at:
+  - `https://localhost:5001/swagger`
+
 
 ### Frontend Setup
 
@@ -92,7 +98,7 @@ cd PageFlow/backend
 
 3. **Create Environment File**
   Create a .env file with:
-  REACT_APP_API_URL=https://localhost:7067/api
+  REACT_APP_API_URL=https://localhost:5001/api
 
 4. **Start the Development Server**
   npm start
