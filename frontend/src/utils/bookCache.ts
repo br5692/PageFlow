@@ -30,5 +30,36 @@ export const bookCache = {
   clearCache(): void {
     featuredBooksCache = null;
     lastFetchTime = 0;
+  },
+
+  // Update a specific book in the cache
+  updateBookInCache(bookId: number, updatedProperties: Partial<BookDto>): void {
+    if (!featuredBooksCache) return;
+    
+    // Find the book in the cache
+    const bookIndex = featuredBooksCache.findIndex(book => book.id === bookId);
+    if (bookIndex !== -1) {
+      // Create a new book object with updated properties
+      featuredBooksCache[bookIndex] = {
+        ...featuredBooksCache[bookIndex],
+        ...updatedProperties
+      };
+      
+      // Reset the lastFetchTime to extend the cache validity
+      lastFetchTime = Date.now();
+    }
+  },
+  
+  // Remove a specific book from the cache
+  removeBookFromCache(bookId: number): void {
+    if (!featuredBooksCache) return;
+    
+    // Filter out the deleted book from the cache
+    featuredBooksCache = featuredBooksCache.filter(book => book.id !== bookId);
+    
+    // Reset the lastFetchTime to extend the cache validity
+    if (featuredBooksCache.length > 0) {
+      lastFetchTime = Date.now();
+    }
   }
 };

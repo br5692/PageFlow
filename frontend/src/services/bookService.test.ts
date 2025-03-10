@@ -293,7 +293,7 @@ describe('Book Service', () => {
       expect(api.delete).toHaveBeenCalledWith('/Books/1');
     });
     
-    test('should clear the book cache after deletion', async () => {
+    test('should remove the specific book from cache after deletion', async () => {
       // Arrange
       (api.delete as jest.Mock).mockResolvedValue({});
       
@@ -301,7 +301,7 @@ describe('Book Service', () => {
       await bookService.deleteBook(1);
       
       // Assert
-      expect(bookCache.clearCache).toHaveBeenCalled();
+      expect(bookCache.removeBookFromCache).toHaveBeenCalledWith(1);
     });
   });
   

@@ -1,10 +1,12 @@
 import api from './api';
 import { CheckoutDto } from '../types/checkout.types';
+import { bookCache } from '../utils/bookCache';
 
 export const checkoutService = {
   checkoutBook: async (bookId: number): Promise<CheckoutDto> => {
     try {
       const response = await api.post<CheckoutDto>(`/Checkouts/checkout/${bookId}`);
+      bookCache.updateBookInCache(bookId, { isAvailable: false });
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || `Failed to checkout book with ID ${bookId}`;
@@ -16,6 +18,7 @@ export const checkoutService = {
   returnBook: async (checkoutId: number): Promise<CheckoutDto> => {
     try {
       const response = await api.post<CheckoutDto>(`/Checkouts/return/${checkoutId}`);
+      bookCache.updateBookInCache(response.data.bookId, { isAvailable: true });
       return response.data;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || `Failed to return checkout with ID ${checkoutId}`;
@@ -56,4 +59,5 @@ export const checkoutService = {
       throw error;
     }
   }
+
 };

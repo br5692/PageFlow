@@ -79,7 +79,7 @@ export const bookService = {
   deleteBook: async (id: number): Promise<void> => {
     try {
       await api.delete(`/Books/${id}`);
-      bookCache.clearCache();
+      bookCache.removeBookFromCache(id);
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || `Failed to delete book with ID ${id}`;
       console.error(`[BookService] deleteBook failed: ${errorMessage}`, error);
