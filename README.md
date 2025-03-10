@@ -174,7 +174,7 @@ After setup, the system is seeded with two default accounts:
 - `src/types/`: TypeScript interfaces
 
 ## API Documentation
-API documentation is available through Swagger UI at https://localhost:7067/swagger when the backend is running.
+API documentation is available through Swagger UI at https://localhost:5001/swagger when the backend is running.
 
 ## Development Notes
 - Code-first migrations are used for database schema updates
