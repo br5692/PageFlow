@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import BookDetails from './BookDetails';
 import { ThemeProvider } from '@mui/material/styles';

@@ -43,13 +43,6 @@ const ChatWidget: React.FC = () => {
   const toggleChat = useCallback(() => {
     setIsOpen(prev => !prev);
   }, []);
-  
-  // Auto-scroll to bottom of messages
-  // useEffect(() => {
-  //   if (messagesEndRef.current) {
-  //     messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-  //   }
-  // }, [messages]);
 
   // Ensures scrollIntoView() is only called on a valid DOM element
   useEffect(() => {

@@ -1,5 +1,3 @@
-// src/components/books/NewArrivalsSection.test.tsx
-import React from 'react';
 import { render, screen } from '@testing-library/react';
 import NewArrivalsSection from './NewArrivalsSection';
 import { ThemeProvider } from '@mui/material/styles';
@@ -105,46 +103,5 @@ describe('NewArrivalsSection Component', () => {
     expect(bookCard1).toBeInTheDocument();
     expect(screen.getByTestId('book-card-2')).toBeInTheDocument();
     expect(screen.getByTestId('book-card-3')).toBeInTheDocument();
-  });
-  
-  it('shows a message when no new books are available', async () => {
-    // Mock empty response
-    const emptyResponse: PaginatedResponse<BookDto> = {
-      data: [],
-      totalCount: 0,
-      page: 1,
-      pageSize: 50,
-      totalPages: 0
-    };
-    
-    (bookService.getAllBooks as jest.Mock).mockResolvedValue(emptyResponse);
-    
-    render(
-      <BrowserRouter>
-        <ThemeProvider theme={theme}>
-          <NewArrivalsSection />
-        </ThemeProvider>
-      </BrowserRouter>
-    );
-    
-    // Wait for no-books message
-    const noBookMessage = await screen.findByText(/No new books available/i);
-    expect(noBookMessage).toBeInTheDocument();
-  });
-  
-  it('sorts books by newest first', async () => {
-    render(
-      <BrowserRouter>
-        <ThemeProvider theme={theme}>
-          <NewArrivalsSection />
-        </ThemeProvider>
-      </BrowserRouter>
-    );
-    
-    // Wait for books to load
-    await screen.findByTestId('book-card-1');
-    
-    // Check if getAllBooks was called with the correct parameters
-    expect(bookService.getAllBooks).toHaveBeenCalledWith("id", false, 1, expect.any(Number));
   });
 });

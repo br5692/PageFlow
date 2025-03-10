@@ -1,4 +1,3 @@
-// src/components/reviews/ReviewList.tsx
 import React, { useState, useEffect } from 'react';
 import {
   Box,

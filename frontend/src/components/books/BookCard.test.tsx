@@ -1,5 +1,3 @@
-// src/components/books/BookCard.test.tsx
-import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import BookCard from './BookCard';
 import { ThemeProvider } from '@mui/material/styles';

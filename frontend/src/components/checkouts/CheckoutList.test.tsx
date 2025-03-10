@@ -1,6 +1,4 @@
-// src/components/checkouts/CheckoutList.test.tsx
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import CheckoutList from './CheckoutList';
 import { checkoutService } from '../../services/checkoutService';
 import { ThemeProvider } from '@mui/material/styles';

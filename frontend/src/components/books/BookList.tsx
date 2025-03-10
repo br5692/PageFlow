@@ -1,4 +1,3 @@
-// src/components/books/BookList.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Grid, TextField, FormControl, InputLabel, Select, MenuItem, Box,

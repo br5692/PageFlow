@@ -11,7 +11,7 @@ interface AuthContextType {
   register: (userData: RegisterDto) => Promise<void>;
   logout: () => void;
   loading: boolean;
-  error: string | null; // Exposed for convenience
+  error: string | null; 
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

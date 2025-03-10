@@ -12,7 +12,7 @@ namespace backend.Data
         private readonly Random _random = new Random();
 
         // Configuration constants for performance tuning
-        private const int TOTAL_BOOKS = 2000;
+        private const int TOTAL_BOOKS = 1000;
         private const int BATCH_SIZE = 100;
         private const double BOOKS_WITH_REVIEWS_PERCENTAGE = 0.6;
         private const int MAX_REVIEWS_PER_BOOK = 15;

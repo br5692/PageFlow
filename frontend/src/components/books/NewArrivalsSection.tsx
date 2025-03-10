@@ -1,4 +1,3 @@
-// src/components/books/NewArrivalsSection.tsx
 import React, { useState, useEffect } from 'react';
 import { Grid, Box, Typography } from '@mui/material';
 import { bookService } from '../../services/bookService';
@@ -7,10 +6,12 @@ import BookCard from './BookCard';
 import Loading from '../common/Loading';
 import { bookCache } from '../../utils/bookCache';
 
+// Define a constant for the expected number of books
+const EXPECTED_BOOK_COUNT = 8;
+
 const NewArrivalsSection: React.FC = () => {
   const [books, setBooks] = useState<BookDto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     const fetchBooks = async () => {
@@ -21,18 +22,29 @@ const NewArrivalsSection: React.FC = () => {
         const cachedBooks = bookCache.getNewArrivalsBooks();
         if (cachedBooks) {
           setBooks(cachedBooks);
-          setLoading(false);
-          return;
+          
+          // Check if we need to fetch additional books
+          if (cachedBooks.length < EXPECTED_BOOK_COUNT) {
+            const missingCount = EXPECTED_BOOK_COUNT - cachedBooks.length;
+            const response = await bookService.getAllBooks("id", false, 1, missingCount);
+            const newBooks = response.data || [];
+            
+            // Append new books to the cache
+            const updatedBooks = [...cachedBooks, ...newBooks];
+            bookCache.setNewArrivalsBooks(updatedBooks);
+            
+            setBooks(updatedBooks);
+          }
+        } else {
+          // If cache is empty, fetch all books from API
+          const response = await bookService.getAllBooks("id", false, 1, EXPECTED_BOOK_COUNT);
+          const newestBooks = response.data || [];
+          
+          // Cache the books
+          bookCache.setNewArrivalsBooks(newestBooks);
+          
+          setBooks(newestBooks);
         }
-        
-        // If not in cache, fetch from API
-        const response = await bookService.getAllBooks("id", false, 1, 8);
-        const newestBooks = response.data || [];
-        
-        // Cache the books
-        bookCache.setNewArrivalsBooks(newestBooks);
-        
-        setBooks(newestBooks);
       } catch (error) {
         console.error("Error fetching new arrivals:", error);
       } finally {
@@ -41,21 +53,6 @@ const NewArrivalsSection: React.FC = () => {
     };
 
     fetchBooks();
-  }, [refreshTrigger]);
-
-  // Subscribe to cache changes when component mounts
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key && e.key.includes('newArrivals')) {
-        setRefreshTrigger(prev => prev + 1);
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
   }, []);
 
   if (loading) {

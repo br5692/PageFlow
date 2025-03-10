@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen} from '@testing-library/react';
 import { AuthProvider, useAuth } from './AuthContext';
 import { authService } from '../services/authService';
